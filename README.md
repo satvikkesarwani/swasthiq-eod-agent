@@ -165,6 +165,7 @@ Backend `.env` values:
 - `NARRATIVE_RATE_LIMIT_PER_MINUTE`
 - `LLM_ENABLED`
 - `LLM_PROVIDER=nvidia`
+- `NVIDIA_API_KEYS`
 - `NVIDIA_API_KEY`
 - `NVIDIA_MODEL`
 - `NVIDIA_BASE_URL`
@@ -179,18 +180,20 @@ Frontend `.env` values:
 - `VITE_DEV_PROXY_TARGET`
 - `VITE_APP_VERSION`
 
-Never put `NVIDIA_API_KEY` or `DATABASE_URL` in frontend configuration.
+Never put `NVIDIA_API_KEYS`, `NVIDIA_API_KEY`, or `DATABASE_URL` in frontend configuration.
 
 ## NVIDIA Configuration
 
-`NVIDIA_API_KEY` is optional for local/demo operation. If it is missing, the API returns a grounded deterministic fallback summary. To use live model generation, configure the backend only:
+`NVIDIA_API_KEYS` is optional for local/demo operation. If it is missing, the API returns a grounded deterministic fallback summary. To use live model generation with rotation, configure the backend only:
 
 ```env
 LLM_ENABLED=true
 LLM_PROVIDER=nvidia
-NVIDIA_API_KEY=<your-nvidia-api-key>
+NVIDIA_API_KEYS=<key-1>,<key-2>,<key-3>
 NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
 ```
+
+The backend selects one NVIDIA key per provider call, then advances to the next key. `NVIDIA_API_KEY` is still supported for a single-key deployment and is used only when `NVIDIA_API_KEYS` is empty.
 
 ## Demo Data
 
@@ -212,7 +215,7 @@ Backend on Railway:
 3. Add a persistent volume for SQLite.
 4. Set `DATABASE_URL=sqlite:////path/on/volume/swasthiq_eod.db`.
 5. Set `APP_ENV=production`, `LOG_FORMAT=json`, `CORS_ALLOWED_ORIGINS=<vercel-url>`.
-6. Optionally set `NVIDIA_API_KEY`.
+6. Optionally set `NVIDIA_API_KEYS` or `NVIDIA_API_KEY`.
 
 Frontend on Vercel:
 
@@ -260,7 +263,7 @@ npm run build
 - No authentication or real clinic multi-user controls.
 - SQLite persistence on Railway requires a persistent volume.
 - Narrative rate limiting is process-local.
-- Live NVIDIA generation depends on a valid backend-only key.
+- Live NVIDIA generation depends on valid backend-only NVIDIA key configuration.
 - No profit or margin is computed because cost price is not part of the input schema.
 
 ## Submission Links

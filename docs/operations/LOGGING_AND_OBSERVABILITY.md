@@ -52,6 +52,8 @@ Never log:
 
 The backend redaction helper masks common sensitive keys. Frontend logging redacts records, summary/narrative fields, clipboard content, and secret-like keys.
 
+For NVIDIA key rotation, store keys only in backend deployment secrets as `NVIDIA_API_KEYS=<key-1>,<key-2>`. Logs may mention provider fallback categories but must never include key values.
+
 ## Safe Debugging Workflow
 
 1. Use request ID from the UI or response header.

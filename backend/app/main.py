@@ -40,7 +40,7 @@ def _error_response(*, request: Request, code: str, message: str, status_code: i
 def _build_provider(settings: Settings):
     if settings.llm_enabled and settings.llm_provider == "nvidia":
         return ChatNVIDIANarrativeProvider(
-            api_key=settings.nvidia_api_key,
+            api_keys=settings.nvidia_api_key_pool,
             model=settings.nvidia_model,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,

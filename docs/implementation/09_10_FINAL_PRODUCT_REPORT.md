@@ -73,6 +73,7 @@ React does not call NVIDIA, parse narrative text for numbers, derive traces, alt
 
 - Backend now has central logging helpers, request ID context propagation, JSON/text log support, and safe redaction helpers.
 - Request lifecycle logs avoid request bodies and query data.
+- NVIDIA live generation supports backend-only key rotation through `NVIDIA_API_KEYS`; key values are never logged or sent to React.
 - Narrative lifecycle logs cover cache hit, generation start/completion, provider failure, validation failure, repair, fallback, stale discard, and persistence failure.
 - Frontend logging is centralized through `frontend/src/lib/logger.ts`; diagnostics remain local and redacted.
 

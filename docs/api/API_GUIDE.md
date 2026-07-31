@@ -58,4 +58,4 @@ Request body:
 { "force_regenerate": false }
 ```
 
-Returns a backend-validated narrative with traces and unavailable metrics. Missing NVIDIA credentials return deterministic fallback, not a failed app.
+Returns a backend-validated narrative with traces and unavailable metrics. Missing NVIDIA credentials return deterministic fallback, not a failed app. When `NVIDIA_API_KEYS` contains multiple comma-separated keys, the backend rotates one key per provider call before falling back to `NVIDIA_API_KEY`.

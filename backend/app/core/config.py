@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     llm_enabled: bool = True
     llm_provider: Literal["disabled", "nvidia"] = "nvidia"
     nvidia_api_key: SecretStr | None = None
+    nvidia_api_keys: SecretStr | None = None
     nvidia_model: str = "nvidia/nemotron-3-nano-30b-a3b"
     nvidia_base_url: str | None = None
     llm_timeout_seconds: float = Field(default=25.0, gt=0, le=120)
@@ -46,6 +47,16 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [part.strip() for part in value.split(",") if part.strip()]
         return value
+
+    @property
+    def nvidia_api_key_pool(self) -> list[SecretStr]:
+        values: list[SecretStr] = []
+        if self.nvidia_api_keys is not None:
+            raw_pool = self.nvidia_api_keys.get_secret_value()
+            values.extend(SecretStr(part.strip()) for part in raw_pool.split(",") if part.strip())
+        if not values and self.nvidia_api_key is not None and self.nvidia_api_key.get_secret_value():
+            values.append(self.nvidia_api_key)
+        return values
 
 
 @lru_cache

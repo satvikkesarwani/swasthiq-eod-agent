@@ -1,7 +1,8 @@
 import asyncio
+import threading
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic import SecretStr, ValidationError
 
@@ -41,16 +42,20 @@ class ChatNVIDIANarrativeProvider:
     def __init__(
         self,
         *,
-        api_key: SecretStr | None,
         model: str,
         temperature: float,
         max_tokens: int,
         timeout_seconds: float,
         transport_retries: int,
+        api_key: SecretStr | None = None,
+        api_keys: Sequence[SecretStr] | None = None,
         base_url: str | None = None,
         chat_model_factory: Any | None = None,
     ):
-        self._api_key = api_key
+        keys = list(api_keys or [])
+        if not keys and api_key is not None:
+            keys = [api_key]
+        self._api_keys = [key for key in keys if key.get_secret_value()]
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -58,20 +63,33 @@ class ChatNVIDIANarrativeProvider:
         self.transport_retries = transport_retries
         self.base_url = base_url
         self._chat_model_factory = chat_model_factory
-        self._chain = None
+        self._chains: dict[int, Any] = {}
+        self._next_key_index = 0
+        self._rotation_lock = threading.Lock()
 
-    def _build_chain(self):
-        if self._api_key is None or not self._api_key.get_secret_value():
+    @property
+    def key_count(self) -> int:
+        return len(self._api_keys)
+
+    def _select_key_index(self) -> int:
+        if not self._api_keys:
             raise NarrativeProviderNotConfigured()
-        if self._chain is None:
+        with self._rotation_lock:
+            key_index = self._next_key_index
+            self._next_key_index = (self._next_key_index + 1) % len(self._api_keys)
+        return key_index
+
+    def _build_chain(self, key_index: int):
+        if key_index not in self._chains:
             if self._chat_model_factory is None:
                 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
                 self._chat_model_factory = ChatNVIDIA
 
+            api_key = self._api_keys[key_index]
             kwargs: dict[str, Any] = {
                 "model": self.model,
-                "nvidia_api_key": self._api_key.get_secret_value(),
+                "nvidia_api_key": api_key.get_secret_value(),
                 "temperature": self.temperature,
                 "max_completion_tokens": self.max_tokens,
             }
@@ -79,8 +97,8 @@ class ChatNVIDIANarrativeProvider:
                 kwargs["base_url"] = self.base_url
 
             model = self._chat_model_factory(**kwargs).with_structured_output(NarrativeDraft)
-            self._chain = build_prompt() | model
-        return self._chain
+            self._chains[key_index] = build_prompt() | model
+        return self._chains[key_index]
 
     async def generate_draft(
         self,
@@ -89,7 +107,8 @@ class ChatNVIDIANarrativeProvider:
         repair_feedback: list[str] | None = None,
         invalid_draft: dict | None = None,
     ) -> NarrativeProviderResult:
-        chain = self._build_chain()
+        key_index = self._select_key_index()
+        chain = self._build_chain(key_index)
         if repair_feedback:
             request = request.model_copy(update={
                 "repair_feedback": repair_feedback[:12],
