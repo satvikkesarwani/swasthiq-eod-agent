@@ -273,6 +273,18 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
         )
 
     api_prefix = "/api/v1"
+
+    @app.get("/", include_in_schema=False)
+    def root_status(request: Request) -> dict[str, str]:
+        settings = request.app.state.settings
+        return {
+            "name": settings.app_name,
+            "status": "online",
+            "health": f"{api_prefix}/health",
+            "api": api_prefix,
+            "version": settings.app_version,
+        }
+
     app.include_router(health_router, prefix=api_prefix)
     app.include_router(clinic_days_router, prefix=api_prefix)
     app.include_router(narratives_router, prefix=api_prefix)
