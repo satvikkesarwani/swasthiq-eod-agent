@@ -25,7 +25,13 @@ class DisabledNarrativeProvider:
     name: str = "disabled"
     model: str | None = None
 
-    async def generate_draft(self, request: NarrativeGenerationInput) -> NarrativeProviderResult:
+    async def generate_draft(
+        self,
+        request: NarrativeGenerationInput,
+        *,
+        repair_feedback: list[str] | None = None,
+        invalid_draft: dict | None = None,
+    ) -> NarrativeProviderResult:
         raise NarrativeProviderDisabled()
 
 
@@ -76,8 +82,19 @@ class ChatNVIDIANarrativeProvider:
             self._chain = build_prompt() | model
         return self._chain
 
-    async def generate_draft(self, request: NarrativeGenerationInput) -> NarrativeProviderResult:
+    async def generate_draft(
+        self,
+        request: NarrativeGenerationInput,
+        *,
+        repair_feedback: list[str] | None = None,
+        invalid_draft: dict | None = None,
+    ) -> NarrativeProviderResult:
         chain = self._build_chain()
+        if repair_feedback:
+            request = request.model_copy(update={
+                "repair_feedback": repair_feedback[:12],
+                "invalid_draft": invalid_draft,
+            })
         safe_context, approved_placeholders = serialize_generation_input(request)
         attempts = self.transport_retries + 1
         last_error: NarrativeProviderError | None = None
@@ -90,6 +107,8 @@ class ChatNVIDIANarrativeProvider:
                         {
                             "safe_context": safe_context,
                             "approved_placeholders": approved_placeholders,
+                            "repair_feedback": json_safe(repair_feedback or []),
+                            "invalid_draft": json_safe(invalid_draft or {}),
                         }
                     )
                 candidate = result if isinstance(result, NarrativeDraft) else NarrativeDraft.model_validate(result)
@@ -132,3 +151,9 @@ def classify_provider_exception(exc: Exception) -> NarrativeProviderError:
         return NarrativeProviderUnavailable()
     return NarrativeProviderUnavailable()
 
+
+def json_safe(value: Any) -> str:
+    import json
+
+    rendered = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return rendered[:4_000]

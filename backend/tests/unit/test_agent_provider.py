@@ -37,6 +37,7 @@ def valid_draft() -> NarrativeDraft:
     return NarrativeDraft(
         sections=[
             {
+                "intent": "overview",
                 "text_template": "Billed {{reconciliation.total_billed_paise}}.",
                 "trace_keys": ["reconciliation.total_billed_paise"],
             }
@@ -160,6 +161,7 @@ def test_strict_draft_schema_rejects_extra_fields_and_unstructured_output():
             {
                 "sections": [
                     {
+                        "intent": "overview",
                         "text_template": "Billed {{reconciliation.total_billed_paise}}.",
                         "trace_keys": ["reconciliation.total_billed_paise"],
                         "unexpected": "nope",

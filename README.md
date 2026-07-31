@@ -9,6 +9,7 @@ Implementation workspace for a Python REST API and React interface that converts
 - Step 3: Deterministic backend stabilized for Prompt 1.
 - Prompt 2: Persistence, Alembic migrations, hashing/versioning, REST contract, and OpenAPI artifact finalized.
 - Prompt 3: LangChain + NVIDIA `ChatNVIDIA` narrative provider integrated behind deterministic grounding and safe fallback.
+- Prompt 4: Complete grounded narrative pipeline, intent policy, semantic repair, and deterministic fallback finalized.
 - Pre-coding package for Steps 4–7: complete.
 - Remaining coding: React interface, CI, deployment, and production hardening outside Prompt 1 scope.
 
@@ -58,6 +59,8 @@ Prompt 1 stabilization details are recorded in [`docs/implementation/01_BACKEND_
 Prompt 2 persistence and API contract details are recorded in [`docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md`](docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md).
 
 Prompt 3 LangChain + NVIDIA provider details are recorded in [`docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md`](docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md).
+
+Prompt 4 grounded narrative pipeline details are recorded in [`docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md`](docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md).
 
 ## Database and Migrations
 

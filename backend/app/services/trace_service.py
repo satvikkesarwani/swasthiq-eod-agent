@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from app.agent.facts import build_fact_catalogue
+from app.agent.placeholders import render_template
 from app.core.money import format_hour_range, format_paise, format_rate
 from app.schemas.narrative import FigureTrace, NarrativeCandidate
 
@@ -17,40 +19,10 @@ class TraceValue:
 
 
 def build_trace_catalogue(*, clinic_day: Any) -> dict[str, TraceValue]:
-    report = clinic_day.report_json
-    reconciliation = report["reconciliation"]
-    analytics = report["analytics"]
-    catalogue: dict[str, TraceValue] = {
-        "metadata.business_date": TraceValue(clinic_day.business_date.isoformat(), clinic_day.business_date.strftime("%d %b %Y")),
-        "ingestion.accepted_rows": TraceValue(clinic_day.accepted_rows, str(clinic_day.accepted_rows)),
-        "ingestion.rejected_rows": TraceValue(clinic_day.rejected_rows, str(clinic_day.rejected_rows)),
-        "reconciliation.total_billed_paise": TraceValue(reconciliation["total_billed_paise"], format_paise(reconciliation["total_billed_paise"])),
-        "reconciliation.total_collected_paise": TraceValue(reconciliation["total_collected_paise"], format_paise(reconciliation["total_collected_paise"])),
-        "reconciliation.total_outstanding_paise": TraceValue(reconciliation["total_outstanding_paise"], format_paise(reconciliation["total_outstanding_paise"])),
-        "reconciliation.total_refunds_paise": TraceValue(reconciliation["total_refunds_paise"], format_paise(reconciliation["total_refunds_paise"])),
-        "reconciliation.total_discount_paise": TraceValue(reconciliation["total_discount_paise"], format_paise(reconciliation["total_discount_paise"])),
-        "reconciliation.collection_rate": TraceValue(reconciliation["collection_rate"], format_rate(reconciliation["collection_rate"])),
-        "reconciliation.pending_visit_count": TraceValue(reconciliation["pending_visit_count"], str(reconciliation["pending_visit_count"])),
-        "reconciliation.refund_visit_count": TraceValue(reconciliation["refund_visit_count"], str(reconciliation["refund_visit_count"])),
+    return {
+        key: TraceValue(raw_value=fact.raw_value, display_value=fact.display_value)
+        for key, fact in build_fact_catalogue(clinic_day=clinic_day).items()
     }
-
-    peak = analytics.get("peak_hour")
-    if peak:
-        catalogue["analytics.peak_hour.label"] = TraceValue(
-            {"start_hour_utc": peak["start_hour_utc"], "end_hour_utc": peak["end_hour_utc"]},
-            format_hour_range(peak["start_hour_utc"], peak["end_hour_utc"]),
-        )
-        catalogue["analytics.peak_hour.revenue_paise"] = TraceValue(
-            peak["revenue_paise"], format_paise(peak["revenue_paise"])
-        )
-
-    for index, item in enumerate(analytics["top_medicines_by_quantity"]):
-        catalogue[f"analytics.top_medicines_by_quantity.{index}.drug_name"] = TraceValue(item["drug_name"], item["drug_name"])
-        catalogue[f"analytics.top_medicines_by_quantity.{index}.quantity"] = TraceValue(item["quantity"], str(item["quantity"]))
-    for index, item in enumerate(analytics["top_medicines_by_revenue"]):
-        catalogue[f"analytics.top_medicines_by_revenue.{index}.drug_name"] = TraceValue(item["drug_name"], item["drug_name"])
-        catalogue[f"analytics.top_medicines_by_revenue.{index}.revenue_paise"] = TraceValue(item["revenue_paise"], format_paise(item["revenue_paise"]))
-    return catalogue
 
 
 def validate_and_render_candidate(

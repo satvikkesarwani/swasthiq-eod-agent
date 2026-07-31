@@ -7,6 +7,11 @@ class NarrativeModelProvider(Protocol):
     name: str
     model: str | None
 
-    async def generate_draft(self, request: NarrativeGenerationInput) -> NarrativeProviderResult:
+    async def generate_draft(
+        self,
+        request: NarrativeGenerationInput,
+        *,
+        repair_feedback: list[str] | None = None,
+        invalid_draft: dict | None = None,
+    ) -> NarrativeProviderResult:
         ...
-

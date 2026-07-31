@@ -2,19 +2,26 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.agent.classifier import classify_day
 from app.agent.context import build_narrative_generation_input
-from app.agent.exceptions import NarrativeProviderError
+from app.agent.exceptions import (
+    NarrativeProviderAuthenticationError,
+    NarrativeProviderDisabled,
+    NarrativeProviderError,
+    NarrativeProviderInvalidResponse,
+    NarrativeProviderNotConfigured,
+    NarrativeProviderRateLimited,
+    NarrativeProviderTimeout,
+    NarrativeProviderUnavailable,
+)
+from app.agent.fallback import build_fallback_draft
+from app.agent.facts import build_fact_catalogue
+from app.agent.validation import GroundingValidationError, RenderedNarrative, validate_draft
 from app.core.errors import AppError
 from app.integrations.llm_provider import NarrativeProvider
 from app.repositories.clinic_day_repository import ClinicDayRepository
 from app.repositories.narrative_repository import NarrativeRepository
-from app.schemas.narrative import (
-    NarrativeCandidate,
-    NarrativeResponse,
-    NarrativeSectionCandidate,
-    UnavailableMetric,
-)
-from app.services.trace_service import build_trace_catalogue, validate_and_render_candidate
+from app.schemas.narrative import NarrativeResponse
 
 
 class NarrativeService:
@@ -24,151 +31,30 @@ class NarrativeService:
         self.clinic_days = ClinicDayRepository(session)
         self.narratives = NarrativeRepository(session)
 
-    def _fallback_candidate(self, clinic_day: Any) -> NarrativeCandidate:
-        report = clinic_day.report_json
-        reconciliation = report["reconciliation"]
-        analytics = report["analytics"]
-        sections: list[NarrativeSectionCandidate] = []
-
-        if reconciliation["total_billed_paise"] == 0 and reconciliation["total_refunds_paise"] == 0:
-            sections.append(
-                NarrativeSectionCandidate(
-                    text_template="Good evening. No billable activity or refunds were recorded for {{metadata.business_date}}.",
-                    trace_keys=["metadata.business_date"],
-                )
-            )
-        elif reconciliation["total_billed_paise"] == 0:
-            sections.append(
-                NarrativeSectionCandidate(
-                    text_template=(
-                        "Good evening. No new sales were recorded. "
-                        "{{reconciliation.refund_visit_count}} refunds totalling "
-                        "{{reconciliation.total_refunds_paise}} were processed."
-                    ),
-                    trace_keys=[
-                        "reconciliation.refund_visit_count",
-                        "reconciliation.total_refunds_paise",
-                    ],
-                )
-            )
-        else:
-            overview = (
-                "Good evening. {{reconciliation.total_billed_paise}} was billed across "
-                "{{ingestion.accepted_rows}} valid visits, and {{reconciliation.total_collected_paise}} "
-                "was collected ({{reconciliation.collection_rate}})."
-            )
-            overview_keys = [
-                "reconciliation.total_billed_paise",
-                "ingestion.accepted_rows",
-                "reconciliation.total_collected_paise",
-                "reconciliation.collection_rate",
-            ]
-            if reconciliation["total_outstanding_paise"] > 0:
-                overview += (
-                    " {{reconciliation.total_outstanding_paise}} remains outstanding across "
-                    "{{reconciliation.pending_visit_count}} visits."
-                )
-                overview_keys.extend([
-                    "reconciliation.total_outstanding_paise",
-                    "reconciliation.pending_visit_count",
-                ])
-            if reconciliation["total_refunds_paise"] > 0:
-                overview += " Refunds totalled {{reconciliation.total_refunds_paise}}."
-                overview_keys.append("reconciliation.total_refunds_paise")
-            sections.append(NarrativeSectionCandidate(text_template=overview, trace_keys=overview_keys))
-
-            if analytics["peak_hour"]:
-                sections.append(
-                    NarrativeSectionCandidate(
-                        text_template=(
-                            "The busiest hour was {{analytics.peak_hour.label}}, with "
-                            "{{analytics.peak_hour.revenue_paise}} in billed revenue."
-                        ),
-                        trace_keys=["analytics.peak_hour.label", "analytics.peak_hour.revenue_paise"],
-                    )
-                )
-            if analytics["top_medicines_by_quantity"]:
-                sections.append(
-                    NarrativeSectionCandidate(
-                        text_template=(
-                            "Top by quantity: {{analytics.top_medicines_by_quantity.0.drug_name}} "
-                            "({{analytics.top_medicines_by_quantity.0.quantity}} units)."
-                        ),
-                        trace_keys=[
-                            "analytics.top_medicines_by_quantity.0.drug_name",
-                            "analytics.top_medicines_by_quantity.0.quantity",
-                        ],
-                    )
-                )
-            if analytics["top_medicines_by_revenue"]:
-                sections.append(
-                    NarrativeSectionCandidate(
-                        text_template=(
-                            "Top by revenue: {{analytics.top_medicines_by_revenue.0.drug_name}} "
-                            "({{analytics.top_medicines_by_revenue.0.revenue_paise}})."
-                        ),
-                        trace_keys=[
-                            "analytics.top_medicines_by_revenue.0.drug_name",
-                            "analytics.top_medicines_by_revenue.0.revenue_paise",
-                        ],
-                    )
-                )
-
-        return NarrativeCandidate(
-            sections=sections,
-            unavailable_metrics=[
-                UnavailableMetric(metric="profit", reason="Cost-price data was not provided, so profit cannot be calculated.")
-            ],
-        )
-
-    def _required_trace_keys(self, clinic_day: Any) -> set[str]:
-        report = clinic_day.report_json
-        reconciliation = report["reconciliation"]
-        analytics = report["analytics"]
-        if reconciliation["total_billed_paise"] == 0 and reconciliation["total_refunds_paise"] == 0:
-            return {"metadata.business_date"}
-        if reconciliation["total_billed_paise"] == 0:
-            return {"reconciliation.refund_visit_count", "reconciliation.total_refunds_paise"}
-
-        required = {
-            "reconciliation.total_billed_paise",
-            "ingestion.accepted_rows",
-            "reconciliation.total_collected_paise",
-            "reconciliation.collection_rate",
-        }
-        if reconciliation["total_outstanding_paise"] > 0:
-            required.update({"reconciliation.total_outstanding_paise", "reconciliation.pending_visit_count"})
-        if reconciliation["total_refunds_paise"] > 0:
-            required.add("reconciliation.total_refunds_paise")
-        if analytics["peak_hour"]:
-            required.update({"analytics.peak_hour.label", "analytics.peak_hour.revenue_paise"})
-        if analytics["top_medicines_by_quantity"]:
-            required.update({
-                "analytics.top_medicines_by_quantity.0.drug_name",
-                "analytics.top_medicines_by_quantity.0.quantity",
-            })
-        if analytics["top_medicines_by_revenue"]:
-            required.update({
-                "analytics.top_medicines_by_revenue.0.drug_name",
-                "analytics.top_medicines_by_revenue.0.revenue_paise",
-            })
-        return required
-
-    def _validate_complete_summary(self, clinic_day: Any, traces: list[Any]) -> None:
-        used = {trace.report_path for trace in traces}
-        missing = sorted(self._required_trace_keys(clinic_day) - used)
-        if missing:
-            raise ValueError(f"Narrative omitted required report figures: {missing}")
+    @staticmethod
+    def _fallback_reason(exc: NarrativeProviderError | GroundingValidationError | None, *, repair_failed: bool = False) -> str:
+        if repair_failed:
+            return "REPAIR_FAILED"
+        if isinstance(exc, NarrativeProviderDisabled):
+            return "LLM_DISABLED"
+        if isinstance(exc, NarrativeProviderNotConfigured):
+            return "PROVIDER_NOT_CONFIGURED"
+        if isinstance(exc, NarrativeProviderAuthenticationError):
+            return "PROVIDER_AUTHENTICATION_FAILED"
+        if isinstance(exc, NarrativeProviderRateLimited):
+            return "PROVIDER_RATE_LIMITED"
+        if isinstance(exc, NarrativeProviderTimeout):
+            return "PROVIDER_TIMEOUT"
+        if isinstance(exc, NarrativeProviderUnavailable):
+            return "PROVIDER_UNAVAILABLE"
+        if isinstance(exc, NarrativeProviderInvalidResponse):
+            return "PROVIDER_INVALID_RESPONSE"
+        return "GROUNDING_VALIDATION_FAILED"
 
     @staticmethod
-    def _ensure_unavailable_profit(candidate: NarrativeCandidate) -> None:
-        if not any(item.metric.strip().lower() == "profit" for item in candidate.unavailable_metrics):
-            candidate.unavailable_metrics.append(
-                UnavailableMetric(
-                    metric="profit",
-                    reason="Cost-price data was not provided, so profit cannot be calculated.",
-                )
-            )
+    def _fallback_rendered(*, clinic_day: Any, catalogue, day_type, flags) -> RenderedNarrative:
+        fallback = build_fallback_draft(day_type=day_type, flags=flags, catalogue=catalogue)
+        return validate_draft(draft=fallback, catalogue=catalogue, day_type=day_type, flags=flags)
 
     async def generate(self, *, clinic_id: str, business_date, force_regenerate: bool = False) -> NarrativeResponse:
         clinic_day = self.clinic_days.get(clinic_id, business_date, with_children=True)
@@ -189,40 +75,68 @@ class NarrativeService:
                 fallback_reason_code=existing.fallback_reason_code,
             )
 
-        catalogue = build_trace_catalogue(clinic_day=clinic_day)
+        catalogue = build_fact_catalogue(clinic_day=clinic_day)
         generation_input = build_narrative_generation_input(clinic_day=clinic_day, catalogue=catalogue)
-        candidate: NarrativeCandidate
+        day_type, flags = classify_day(clinic_day=clinic_day)
         status = "generated"
         provider_name: str | None = self.provider.name
         model_name: str | None = self.provider.model
         generation_ms: int | None = None
         fallback_reason_code: str | None = None
+        rendered: RenderedNarrative
 
         try:
             provider_result = await self.provider.generate_draft(generation_input)
-            candidate = NarrativeCandidate.model_validate(provider_result.candidate.model_dump())
             provider_name = provider_result.provider
             model_name = provider_result.model
             generation_ms = provider_result.generation_ms
-            self._ensure_unavailable_profit(candidate)
-            summary, traces = validate_and_render_candidate(candidate, catalogue)
-            self._validate_complete_summary(clinic_day, traces)
+            try:
+                rendered = validate_draft(
+                    draft=provider_result.candidate,
+                    catalogue=catalogue,
+                    day_type=day_type,
+                    flags=flags,
+                )
+            except GroundingValidationError as validation_error:
+                try:
+                    repair_result = await self.provider.generate_draft(
+                        generation_input,
+                        repair_feedback=[code.value for code in validation_error.codes],
+                        invalid_draft=provider_result.candidate.model_dump(mode="json"),
+                    )
+                    provider_name = repair_result.provider
+                    model_name = repair_result.model
+                    generation_ms = (generation_ms or 0) + repair_result.generation_ms
+                    rendered = validate_draft(
+                        draft=repair_result.candidate,
+                        catalogue=catalogue,
+                        day_type=day_type,
+                        flags=flags,
+                    )
+                except (NarrativeProviderError, GroundingValidationError):
+                    rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
+                    status = "fallback"
+                    provider_name = self.provider.name if self.provider.name != "disabled" else None
+                    model_name = self.provider.model
+                    fallback_reason_code = "REPAIR_FAILED"
         except NarrativeProviderError as exc:
-            candidate = self._fallback_candidate(clinic_day)
-            summary, traces = validate_and_render_candidate(candidate, catalogue)
-            self._validate_complete_summary(clinic_day, traces)
+            rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
             model_name = self.provider.model
-            fallback_reason_code = exc.code
+            fallback_reason_code = self._fallback_reason(exc)
+        except GroundingValidationError:
+            rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
+            status = "fallback"
+            provider_name = self.provider.name if self.provider.name != "disabled" else None
+            model_name = self.provider.model
+            fallback_reason_code = "REPAIR_FAILED"
         except Exception:
-            candidate = self._fallback_candidate(clinic_day)
-            summary, traces = validate_and_render_candidate(candidate, catalogue)
-            self._validate_complete_summary(clinic_day, traces)
+            rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
             model_name = self.provider.model
-            fallback_reason_code = "MODEL_GROUNDING_INVALID"
+            fallback_reason_code = "GROUNDING_VALIDATION_FAILED"
 
         self.session.expire_all()
         current_clinic_day = self.clinic_days.get(clinic_id, business_date, with_children=True)
@@ -236,14 +150,14 @@ class NarrativeService:
             )
         clinic_day = current_clinic_day
 
-        unavailable = [item.model_dump() for item in candidate.unavailable_metrics]
-        trace_payload = [trace.model_dump(mode="json") for trace in traces]
+        unavailable = [item.model_dump() for item in rendered.unavailable_metrics]
+        trace_payload = [trace.model_dump(mode="json") for trace in rendered.traces]
         try:
             self.narratives.save(
                 clinic_day_id=clinic_day.id,
                 report_hash=clinic_day.report_hash,
                 status=status,
-                summary_text=summary,
+                summary_text=rendered.summary,
                 traces=trace_payload,
                 unavailable_metrics=unavailable,
                 provider=provider_name,
@@ -258,7 +172,7 @@ class NarrativeService:
 
         return NarrativeResponse(
             status=status,
-            summary=summary,
+            summary=rendered.summary,
             traces=trace_payload,
             unavailable_metrics=unavailable,
             report_hash=clinic_day.report_hash,
