@@ -1,29 +1,116 @@
-import { LoadingSkeleton } from "../components/feedback/LoadingSkeleton";
+import { useMemo, useState } from "react";
+import { useLoaderData, useLocation, useNavigation } from "react-router";
+
+import { analyticsPath, narrativePath } from "../app/routes";
 import { PageContainer } from "../components/layout/PageContainer";
-import { ReportContextBar } from "../components/report/ReportContextBar";
-import { ReportRouteGuard } from "../components/report/ReportRouteGuard";
 import { GlassPanel } from "../components/primitives/GlassPanel";
+import { Button } from "../components/primitives/Button";
+import { ValidationIssuesDrawer } from "../features/import/components/ValidationIssuesDrawer";
+import { ActivityBanner } from "../features/reconciliation/components/ActivityBanner";
+import { CollectionHealthPanel } from "../features/reconciliation/components/CollectionHealthPanel";
+import { DataQualityWarnings } from "../features/reconciliation/components/DataQualityWarnings";
+import { ImportQualityBanner } from "../features/reconciliation/components/ImportQualityBanner";
+import { PaymentModeBreakdown } from "../features/reconciliation/components/PaymentModeBreakdown";
+import { ReconciliationLoadError, ReconciliationNotFound } from "../features/reconciliation/components/ReconciliationErrorState";
+import { ReconciliationHeader } from "../features/reconciliation/components/ReconciliationHeader";
+import { ReconciliationMetrics } from "../features/reconciliation/components/ReconciliationMetrics";
+import { ReconciliationSkeleton } from "../features/reconciliation/components/ReconciliationSkeleton";
+import { ReportIntegrityPanel } from "../features/reconciliation/components/ReportIntegrityPanel";
+import { importNotice } from "../features/reconciliation/presentation";
+import type { ReconciliationLoaderData } from "../features/reconciliation/types";
+import type { ImportResult } from "../features/import/types";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import styles from "./Page.module.css";
+import styles from "../features/reconciliation/reconciliation.module.css";
 
 export function ReconciliationPage() {
-  useDocumentTitle("Reconciliation");
+  const loaderData = useLoaderData<ReconciliationLoaderData>();
+  const navigation = useNavigation();
+  const location = useLocation();
+  const [issuesOpen, setIssuesOpen] = useState(false);
+  const report = loaderData.state === "ready" ? loaderData.report : null;
+  const issueResult: ImportResult | null = useMemo(() => {
+    if (!report) {
+      return null;
+    }
+    return {
+      clinicId: report.clinic_id,
+      businessDate: report.business_date,
+      status: report.status,
+      operation: report.operation ?? "loaded",
+      receivedRows: report.ingestion.received_rows,
+      acceptedRows: report.ingestion.accepted_rows,
+      rejectedRows: report.ingestion.rejected_rows,
+      reportHash: report.report_hash,
+      warnings: report.report.data_quality_warnings.map((warning) => warning.message),
+      response: report,
+    };
+  }, [report]);
+
+  useDocumentTitle(loaderData.state === "ready" ? "EOD Reconciliation" : "Report unavailable");
+
+  if (navigation.state === "loading" && loaderData.state !== "ready") {
+    return <ReconciliationSkeleton />;
+  }
+
+  if (loaderData.state === "not_found") {
+    return (
+      <PageContainer eyebrow="Billing review" title="Report not found" description="Import a billing log to create this clinic-day report.">
+        <ReconciliationNotFound data={loaderData} />
+      </PageContainer>
+    );
+  }
+
+  if (loaderData.state === "error") {
+    return (
+      <PageContainer eyebrow="Billing review" title="Report unavailable" description="The application shell is still available.">
+        <ReconciliationLoadError data={loaderData} />
+      </PageContainer>
+    );
+  }
+
+  if (!report) {
+    return null;
+  }
+
+  const notice = importNotice((location.state as { operation?: string } | null)?.operation ?? report.operation);
 
   return (
-    <ReportRouteGuard>
-      <ReportContextBar section="Reconciliation" />
-      <PageContainer
-        eyebrow="Billing review"
-        title="Reconciliation"
-        description="A guarded placeholder for deterministic billing checks, ingestion issues, and operator review."
-      >
-        <GlassPanel title="Reconciliation surface" description="Data widgets will mount here after the dedicated report workflow prompt.">
-          <div className={styles.stack}>
-            <p className={styles.copy}>No clinic totals or variance figures are fabricated in the foundation build.</p>
-            <LoadingSkeleton rows={3} />
-          </div>
-        </GlassPanel>
-      </PageContainer>
-    </ReportRouteGuard>
+    <>
+      <div className={styles.page} aria-busy={navigation.state === "loading" ? "true" : undefined}>
+        <ReconciliationHeader report={report} />
+        {notice && (
+          <section className={styles.notice} role="status" aria-label="Import result">
+            <div>
+              <h2>{notice}</h2>
+              <p>The canonical report below was loaded from the backend.</p>
+            </div>
+          </section>
+        )}
+        <ImportQualityBanner report={report} onReviewIssues={() => setIssuesOpen(true)} />
+        <ActivityBanner report={report} />
+        <ReconciliationMetrics report={report} />
+        <div className={styles.mainGrid}>
+          <GlassPanel title="Payment Mode Breakdown" description="Backend-supplied split across cash, card and UPI.">
+            <PaymentModeBreakdown report={report} />
+          </GlassPanel>
+          <GlassPanel title="Collection Health" description="Uses only backend totals and collection rate.">
+            <CollectionHealthPanel report={report} />
+          </GlassPanel>
+        </div>
+        <div className={styles.supportGrid}>
+          <GlassPanel title="Data Quality Warnings" description="Non-blocking warnings generated by deterministic checks.">
+            <DataQualityWarnings report={report} />
+          </GlassPanel>
+          <GlassPanel title="Report Integrity" description="Safe metadata for this deterministic report.">
+            <ReportIntegrityPanel report={report} onReviewIssues={() => setIssuesOpen(true)} />
+          </GlassPanel>
+        </div>
+        <nav className={styles.bottomNav} aria-label="Continue exploring report">
+          <Button to={analyticsPath(report.clinic_id, report.business_date)} variant="primary">View Analytics</Button>
+          <Button to={narrativePath(report.clinic_id, report.business_date)} variant="secondary">View AI Summary</Button>
+        </nav>
+      </div>
+      <ValidationIssuesDrawer open={issuesOpen} result={issueResult} onClose={() => setIssuesOpen(false)} />
+    </>
   );
 }

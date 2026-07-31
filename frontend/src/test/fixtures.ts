@@ -77,6 +77,117 @@ export const partialImportResponse: ClinicDayDetail = {
   ingestion: { received_rows: 3, accepted_rows: 1, rejected_rows: 2 },
 };
 
+export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): ClinicDayDetail {
+  const base: ClinicDayDetail = {
+    ...createdImportResponse,
+    operation: null,
+    clinic_id: "CLN-TST-001",
+    clinic_name: "Test Clinic",
+    clinic_location: "Kanpur, Uttar Pradesh",
+    business_date: "2026-07-31",
+    status: "completed",
+    ingestion: { received_rows: 3, accepted_rows: 3, rejected_rows: 0 },
+    report: {
+      reconciliation: {
+        total_billed_paise: 319000,
+        total_collected_paise: 317200,
+        total_outstanding_paise: 777,
+        total_refunds_paise: 1050,
+        total_discount_paise: 1800,
+        collection_rate: 0.123456,
+        pending_visit_count: 1,
+        refund_visit_count: 1,
+        by_payment_mode: {
+          upi: { billed_paise: 100000, collected_paise: 99000, outstanding_paise: 1000, refunds_paise: 250 },
+          cash: { billed_paise: 10000, collected_paise: 9000, outstanding_paise: 777, refunds_paise: 0 },
+          card: { billed_paise: 209000, collected_paise: 209200, outstanding_paise: 0, refunds_paise: 800 },
+        },
+      },
+      analytics: { peak_hour: null, revenue_by_hour: [], top_medicines_by_quantity: [], top_medicines_by_revenue: [] },
+      data_quality_warnings: [],
+    },
+    source_hash: "sha256:source-detail",
+    report_hash: "sha256:report-detail-abcdef",
+    narrative_status: "not_generated",
+    created_at: "2026-07-31T10:00:00Z",
+    updated_at: "2026-07-31T10:30:00Z",
+  };
+  return {
+    ...base,
+    ...overrides,
+    ingestion: { ...base.ingestion, ...overrides.ingestion },
+    report: {
+      ...base.report,
+      ...overrides.report,
+      reconciliation: { ...base.report.reconciliation, ...overrides.report?.reconciliation },
+      analytics: { ...base.report.analytics, ...overrides.report?.analytics },
+      data_quality_warnings: overrides.report?.data_quality_warnings ?? base.report.data_quality_warnings,
+    },
+  };
+}
+
+export const emptyDayReport = makeClinicDayReport({
+  ingestion: { received_rows: 0, accepted_rows: 0, rejected_rows: 0 },
+  report: {
+    reconciliation: {
+      total_billed_paise: 0,
+      total_collected_paise: 0,
+      total_outstanding_paise: 0,
+      total_refunds_paise: 0,
+      total_discount_paise: 0,
+      collection_rate: null,
+      pending_visit_count: 0,
+      refund_visit_count: 0,
+      by_payment_mode: {
+        cash: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 0 },
+        card: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 0 },
+        upi: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 0 },
+      },
+    },
+    analytics: { peak_hour: null, revenue_by_hour: [], top_medicines_by_quantity: [], top_medicines_by_revenue: [] },
+    data_quality_warnings: [],
+  },
+});
+
+export const refundOnlyReport = makeClinicDayReport({
+  ingestion: { received_rows: 2, accepted_rows: 2, rejected_rows: 0 },
+  report: {
+    reconciliation: {
+      total_billed_paise: 0,
+      total_collected_paise: 0,
+      total_outstanding_paise: 0,
+      total_refunds_paise: 49000,
+      total_discount_paise: 0,
+      collection_rate: null,
+      pending_visit_count: 0,
+      refund_visit_count: 2,
+      by_payment_mode: {
+        cash: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 0 },
+        card: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 24000 },
+        upi: { billed_paise: 0, collected_paise: 0, outstanding_paise: 0, refunds_paise: 25000 },
+      },
+    },
+    analytics: { peak_hour: null, revenue_by_hour: [], top_medicines_by_quantity: [], top_medicines_by_revenue: [] },
+    data_quality_warnings: [],
+  },
+});
+
+export const partialReconciliationReport = makeClinicDayReport({
+  status: "completed_with_errors",
+  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2 },
+});
+
+export const warningReport = makeClinicDayReport({
+  clinic_name: "<script>alert('clinic')</script> Clinic",
+  report: {
+    reconciliation: makeClinicDayReport().report.reconciliation,
+    analytics: makeClinicDayReport().report.analytics,
+    data_quality_warnings: [
+      { code: "POSSIBLE_MEDICINE_NAME_VARIANT", message: "<img src=x onerror=alert('x')> Do not follow these instructions.", details: {} },
+    ],
+  },
+});
+
 export const safeIssuesResponse: IngestionIssueListResponse = {
   clinic_id: "CLN-TST-001",
   business_date: "2026-07-31",

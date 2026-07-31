@@ -1,19 +1,20 @@
 import { screen, waitFor } from "@testing-library/dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { healthyResponse, recentReportsResponse } from "../test/fixtures";
+import { healthyResponse, makeClinicDayReport, recentReportsResponse } from "../test/fixtures";
 import { renderApp } from "../test/renderWithRouter";
 
 vi.mock("../api/endpoints", () => {
-  return { getHealth: vi.fn(), listClinicDays: vi.fn() };
+  return { getHealth: vi.fn(), listClinicDays: vi.fn(), getClinicDay: vi.fn() };
 });
 
 describe("application shell and routes", () => {
   beforeEach(async () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
-    const { getHealth, listClinicDays } = await import("../api/endpoints");
+    const { getHealth, listClinicDays, getClinicDay } = await import("../api/endpoints");
     vi.mocked(getHealth).mockResolvedValue(healthyResponse);
     vi.mocked(listClinicDays).mockResolvedValue(recentReportsResponse);
+    vi.mocked(getClinicDay).mockResolvedValue(makeClinicDayReport());
   });
 
   it("renders reports home with persistent navigation and topbar status", async () => {
@@ -47,8 +48,8 @@ describe("application shell and routes", () => {
   it("shows guard state for invalid report params", async () => {
     renderApp("/reports/clinic-a/not-a-date/reconciliation");
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Report context unavailable");
-    expect(screen.getByRole("link", { name: "Back to reports" })).toHaveAttribute("href", "/reports");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Report context unavailable");
+    expect(screen.getByRole("link", { name: "Back to Reports" })).toHaveAttribute("href", "/reports");
     await waitFor(() => expect(screen.getByText("Backend online")).toBeVisible());
   });
 

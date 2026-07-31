@@ -36,7 +36,7 @@ npm run build
 - `/reports/:clinicId/:businessDate/analytics`
 - `/reports/:clinicId/:businessDate/narrative`
 
-Prompt 5 intentionally ships polished placeholders only. Import, reconciliation, analytics, and narrative data integration are deferred to later prompts.
+Prompt 7 ships the production reconciliation route. Analytics and narrative pages remain placeholders until their dedicated prompts.
 
 ## Import Workflow
 
@@ -51,3 +51,18 @@ Prompt 5 intentionally ships polished placeholders only. Import, reconciliation,
 - filter, page, and open recent reports.
 
 The frontend accepts files up to `4.75 MiB` while documenting the backend `5 MiB` request limit. It does not persist raw billing records, preview raw rows, calculate money, or validate business row rules.
+
+## Reconciliation Dashboard
+
+`/reports/:clinicId/:businessDate/reconciliation` uses a React Router loader to read the canonical clinic-day detail endpoint on deep link, refresh, and explicit "Refresh report" actions.
+
+The page includes:
+
+- clinic/date/status context and safe report metadata;
+- four prominent cards for Total Billed, Total Collected, Outstanding, and Refunds;
+- accessible payment-mode table for Cash, Card, and UPI backend rows;
+- collection-rate and pending/refund visit counts when supplied by the backend;
+- partial-import banner with Prompt 6 validation-issues drawer access;
+- empty-day, refund-only, sales-and-refunds, warning, not-found, and retryable failure states.
+
+The frontend does not derive business metrics. It only formats backend-supplied paise, dates, counts, and percentages.

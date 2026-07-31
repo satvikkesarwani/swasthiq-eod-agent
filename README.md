@@ -13,7 +13,8 @@ Implementation workspace for a Python REST API and React interface that converts
 - Prompt 5: React frontend foundation, typed OpenAPI client, design system, app shell, and placeholder routes finalized.
 - Prompt 6: Billing-log import, validation issues, recent reports, filters, pagination, and report-opening workflow finalized.
 - Pre-coding package for Steps 4–7: complete.
-- Remaining coding: final reconciliation dashboard, analytics screen, AI narrative screen, CI, deployment, and production hardening outside Prompt 6 scope.
+- Prompt 7: Production EOD Reconciliation Dashboard finalized with backend-authoritative KPI cards, payment-mode breakdown, collection health, issue access, empty/refund states, and safe error handling.
+- Remaining coding: analytics screen, AI narrative screen, CI, deployment, and production hardening outside Prompt 7 scope.
 
 ## Locked stack
 
@@ -68,6 +69,8 @@ Prompt 5 frontend foundation details are recorded in [`docs/implementation/05_FR
 
 Prompt 6 import and recent-report workflow details are recorded in [`docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md`](docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md).
 
+Prompt 7 reconciliation dashboard details are recorded in [`docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md`](docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md).
+
 ## Frontend verification
 
 From `frontend/`, run:
@@ -103,6 +106,30 @@ flowchart TD
     B --> J["Open stored report"]
     I --> H
 ```
+
+## Reconciliation dashboard
+
+The reconciliation route loads the canonical clinic-day detail response from:
+
+```text
+GET /api/v1/clinic-days/{clinic_id}/{business_date}
+```
+
+React displays backend values only. It formats integer paise as rupees, formats the backend-supplied collection rate, orders existing payment-mode rows for readability, and selects neutral visual status labels. It does not recalculate outstanding, collection rate, totals, payment-mode totals, discounts, visit counts, or rejected-row counts.
+
+```mermaid
+flowchart TD
+    A["Open reconciliation deep link"] --> B["React Router loader"]
+    B --> C["GET canonical clinic-day detail"]
+    C --> D["Header and report context"]
+    C --> E["Four financial cards"]
+    C --> F["Payment-mode breakdown"]
+    C --> G["Collection health"]
+    C --> H["Data-quality and integrity panels"]
+    H --> I["Validation issues drawer on demand"]
+```
+
+The page handles normal sales days, outstanding balances, partial imports, valid empty days, refund-only days, sales-and-refunds days, backend warnings, 404 report-not-found responses, and safe retryable API failures.
 
 ## Database and Migrations
 

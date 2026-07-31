@@ -1,0 +1,364 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.header {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.headerTitle {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-teal);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: 0;
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.context dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.context dd {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.notice,
+.qualityBanner,
+.activityBanner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: rgba(244, 200, 111, 0.1);
+  border: 1px solid rgba(244, 200, 111, 0.38);
+  border-radius: var(--radius-md);
+}
+
+.notice {
+  background: rgba(99, 216, 215, 0.1);
+  border-color: rgba(99, 216, 215, 0.36);
+}
+
+.activityBanner {
+  background: rgba(184, 167, 255, 0.1);
+  border-color: rgba(184, 167, 255, 0.32);
+}
+
+.notice p,
+.qualityBanner p,
+.activityBanner p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.notice h2,
+.qualityBanner h2,
+.activityBanner h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.metricCard {
+  display: grid;
+  min-height: 10.5rem;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.metricHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.metricLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metricIcon {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: rgba(87, 167, 255, 0.12);
+  color: var(--color-blue);
+}
+
+.metricValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(1.65rem, 5vw, 2.5rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.metricDescription {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.success .metricIcon {
+  background: rgba(118, 214, 155, 0.12);
+  color: var(--color-green);
+}
+
+.warning .metricIcon {
+  background: rgba(244, 200, 111, 0.14);
+  color: var(--color-yellow);
+}
+
+.refund .metricIcon {
+  background: rgba(184, 167, 255, 0.12);
+  color: var(--color-lavender);
+}
+
+.mainGrid,
+.supportGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+}
+
+.caption {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.moneyCell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.modeCell {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.healthStack,
+.integrityGrid,
+.warningList {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.healthLabel {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.progressTrack {
+  height: 0.65rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-blue), var(--color-teal));
+}
+
+.integrityGrid {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+}
+
+.integrityItem {
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.integrityItem span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.integrityItem strong {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.warningList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.warningList li {
+  padding: var(--space-3);
+  background: rgba(244, 200, 111, 0.08);
+  border: 1px solid rgba(244, 200, 111, 0.22);
+  border-radius: var(--radius-sm);
+}
+
+.bottomNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+}
+
+.errorPanel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.supportDetails {
+  color: var(--color-text-muted);
+}
+
+.supportDetails code {
+  color: var(--color-text);
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.skeletonBlock {
+  min-height: 8rem;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeletonBlock {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (min-width: 720px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1040px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mainGrid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
+  }
+
+  .supportGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .metricCard,
+  .notice,
+  .qualityBanner,
+  .activityBanner {
+    padding: var(--space-4);
+  }
+
+  .actions,
+  .bottomNav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

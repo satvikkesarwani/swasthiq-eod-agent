@@ -302,6 +302,10 @@ Profit is not available because cost-price data was not provided.
 ## Prompt 6 Implementation Note
 
 Prompt 6 keeps the Prompt 5 dark floating glass-panel interface rather than the earlier light-card palette in this planning document. The Reports route now contains the first end-to-end workflow: clinic/date metadata, accessible JSON dropzone, conservative file-size validation, backend-authoritative import submission, partial-import issue review, recent-report filters, URL-backed pagination, and report-opening links. Final reconciliation KPI cards, analytics charts, and AI narrative controls remain deferred to Prompts 7-9.
+
+## Prompt 7 Implementation Note
+
+Prompt 7 replaces the Reconciliation placeholder with a loader-backed EOD dashboard in the same dark glass-panel interface. The page reads `GET /api/v1/clinic-days/{clinic_id}/{business_date}` on deep links and refresh, displays only backend-supplied reconciliation fields, reuses the Prompt 6 validation-issues drawer, and covers partial imports, empty days, refund-only days, sales-and-refunds, data-quality warnings, controlled not-found states, and safe retryable API failures. Analytics charts and AI narrative controls remain deferred to Prompts 8 and 9.
 - Minimum 4.5:1 contrast for normal text.
 - Chart includes a text summary and peak value outside the SVG.
 - Status is not communicated using color alone.
