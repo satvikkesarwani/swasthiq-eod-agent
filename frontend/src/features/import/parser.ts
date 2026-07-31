@@ -17,6 +17,38 @@ function fileError(code: BillingFileError["code"], message: string): BillingFile
   return { code, message };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function uniqueStringValues(records: unknown[], field: string): string[] {
+  const values = new Set<string>();
+  for (const row of records) {
+    if (!isRecord(row)) {
+      continue;
+    }
+    const value = row[field];
+    if (typeof value === "string" && value.trim()) {
+      values.add(value.trim());
+    }
+  }
+  return [...values];
+}
+
+function uniqueUtcDates(records: unknown[]): string[] {
+  const values = new Set<string>();
+  for (const row of records) {
+    if (!isRecord(row)) {
+      continue;
+    }
+    const timestamp = row.timestamp;
+    if (typeof timestamp === "string" && /^\d{4}-\d{2}-\d{2}T/.test(timestamp)) {
+      values.add(timestamp.slice(0, 10));
+    }
+  }
+  return [...values];
+}
+
 async function readFileText(file: File): Promise<string> {
   const decoder = new TextDecoder("utf-8", { fatal: true });
   if (typeof file.arrayBuffer === "function") {
@@ -86,11 +118,19 @@ export async function parseBillingLogFile(file: File): Promise<ParsedBillingFile
     throw new BillingFileParseError(fileError("ROOT_NOT_ARRAY", "The JSON root must be an array of billing records."));
   }
 
+  const clinicIds = uniqueStringValues(parsed, "clinic_id");
+  const businessDates = uniqueUtcDates(parsed);
+  const inferredClinicId = clinicIds.length === 1 ? clinicIds[0] ?? null : null;
+  const inferredBusinessDate = businessDates.length === 1 ? businessDates[0] ?? null : null;
   logDiagnostic("info", "import.parser", "Parse file success", {
     fileName: file.name,
     fileSizeBytes: file.size,
     rowCount: parsed.length,
     isEmpty: parsed.length === 0,
+    inferredClinicId,
+    inferredBusinessDate,
+    clinicIdCount: clinicIds.length,
+    businessDateCount: businessDates.length,
   });
   return {
     fileName: file.name,
@@ -98,5 +138,9 @@ export async function parseBillingLogFile(file: File): Promise<ParsedBillingFile
     records: parsed,
     rowCount: parsed.length,
     isEmpty: parsed.length === 0,
+    inferredClinicId,
+    inferredBusinessDate,
+    hasMixedClinicIds: clinicIds.length > 1,
+    hasMixedBusinessDates: businessDates.length > 1,
   };
 }

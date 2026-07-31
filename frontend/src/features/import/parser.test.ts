@@ -14,7 +14,13 @@ describe("parseBillingLogFile", () => {
     expect(parsed.rowCount).toBe(3);
     expect(parsed.isEmpty).toBe(false);
     await expect(parseBillingLogFile(jsonFile("[]", "empty.JSON", ""))).resolves.toMatchObject({ rowCount: 0, isEmpty: true });
-    await expect(parseBillingLogFile(jsonFile(`\uFEFF${JSON.stringify(validSalesRecords)}`))).resolves.toMatchObject({ rowCount: 1 });
+    await expect(parseBillingLogFile(jsonFile(`\uFEFF${JSON.stringify(validSalesRecords)}`))).resolves.toMatchObject({
+      rowCount: 1,
+      inferredClinicId: "CLN-TST-001",
+      inferredBusinessDate: "2026-07-31",
+      hasMixedClinicIds: false,
+      hasMixedBusinessDates: false,
+    });
   });
 
   it("rejects invalid JSON and non-array roots safely", async () => {

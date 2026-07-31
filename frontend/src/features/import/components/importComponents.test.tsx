@@ -18,7 +18,17 @@ describe("import feature components", () => {
   it("supports file selection, remove and drag/drop callbacks", async () => {
     const onFilesSelected = vi.fn();
     const onRemove = vi.fn();
-    const parsedFile = { fileName: "billing.json", fileSizeBytes: 2, records: [], rowCount: 0, isEmpty: true };
+    const parsedFile = {
+      fileName: "billing.json",
+      fileSizeBytes: 2,
+      records: [],
+      rowCount: 0,
+      isEmpty: true,
+      inferredClinicId: null,
+      inferredBusinessDate: null,
+      hasMixedClinicIds: false,
+      hasMixedBusinessDates: false,
+    };
     const { rerender } = render(
       <BillingLogDropzone parsedFile={null} error={null} reading={false} onFilesSelected={onFilesSelected} onRemove={onRemove} />,
     );

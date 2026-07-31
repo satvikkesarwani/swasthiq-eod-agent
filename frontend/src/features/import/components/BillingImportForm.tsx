@@ -1,5 +1,5 @@
 import { RotateCcw } from "lucide-react";
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "../../../components/primitives/Button";
 import { GlassPanel } from "../../../components/primitives/GlassPanel";
@@ -38,6 +38,19 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
   const { state, dispatch, selectFiles } = useBillingFileState();
   const { submitImport } = useBillingImport(state, dispatch);
 
+  useEffect(() => {
+    const parsedFile = state.parsedFile;
+    if (parsedFile === null) {
+      return;
+    }
+    if (!clinicId.trim() && parsedFile.inferredClinicId) {
+      setClinicId(parsedFile.inferredClinicId);
+    }
+    if (!businessDate.trim() && parsedFile.inferredBusinessDate) {
+      setBusinessDate(parsedFile.inferredBusinessDate);
+    }
+  }, [businessDate, clinicId, state.parsedFile]);
+
   const trimmedClinicId = clinicId.trim();
   const normalizedBusinessDate = normalizeBusinessDateInput(businessDate);
   const existingReport = normalizedBusinessDate !== null && recentReports.some((report) => report.clinic_id === trimmedClinicId && report.business_date === normalizedBusinessDate);
@@ -54,6 +67,16 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
     }
     if (state.parsedFile === null) {
       errors.file = "Choose a JSON billing log.";
+    } else {
+      if (state.parsedFile.hasMixedClinicIds) {
+        errors.file = "The selected file contains multiple clinic IDs. Choose one clinic-day file.";
+      } else if (state.parsedFile.inferredClinicId && trimmedClinicId && state.parsedFile.inferredClinicId !== trimmedClinicId) {
+        errors.file = `Selected file is for clinic ${state.parsedFile.inferredClinicId}. Update Clinic ID or choose a matching file.`;
+      } else if (state.parsedFile.hasMixedBusinessDates) {
+        errors.file = "The selected file contains multiple business dates. Choose one clinic-day file.";
+      } else if (state.parsedFile.inferredBusinessDate && normalizedBusinessDate && state.parsedFile.inferredBusinessDate !== normalizedBusinessDate) {
+        errors.file = `Selected file is for ${state.parsedFile.inferredBusinessDate}. Update Business date or choose a matching file.`;
+      }
     }
     if (existingReport && !confirmReplacement) {
       errors.confirmReplacement = "Confirm replacement before submitting this clinic day.";

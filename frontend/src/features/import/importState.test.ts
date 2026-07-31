@@ -4,7 +4,17 @@ import { createdImportResponse } from "../../test/fixtures";
 import { mapImportResult } from "./importMapping";
 import { importReducer, initialImportState } from "./importState";
 
-const parsedFile = { fileName: "a.json", fileSizeBytes: 2, records: [], rowCount: 0, isEmpty: true };
+const parsedFile = {
+  fileName: "a.json",
+  fileSizeBytes: 2,
+  records: [],
+  rowCount: 0,
+  isEmpty: true,
+  inferredClinicId: null,
+  inferredBusinessDate: null,
+  hasMixedClinicIds: false,
+  hasMixedBusinessDates: false,
+};
 
 describe("importReducer", () => {
   it("walks the import state machine and blocks stale responses", () => {

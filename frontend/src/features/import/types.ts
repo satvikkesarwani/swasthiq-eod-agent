@@ -6,6 +6,10 @@ export type ParsedBillingFile = {
   records: unknown[];
   rowCount: number;
   isEmpty: boolean;
+  inferredClinicId: string | null;
+  inferredBusinessDate: string | null;
+  hasMixedClinicIds: boolean;
+  hasMixedBusinessDates: boolean;
 };
 
 export type BillingFileErrorCode =
