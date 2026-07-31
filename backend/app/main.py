@@ -1,12 +1,14 @@
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes_clinic_days import router as clinic_days_router
 from app.api.routes_health import router as health_router
@@ -22,6 +24,10 @@ from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledN
 from app.schemas.ingestion import BillingLogRequest
 
 logger = get_logger(__name__)
+
+
+def _frontend_dist_dir() -> Path:
+    return Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
 def _error_response(*, request: Request, code: str, message: str, status_code: int) -> JSONResponse:
@@ -274,20 +280,34 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
 
     api_prefix = "/api/v1"
 
-    @app.get("/", include_in_schema=False)
-    def root_status(request: Request) -> dict[str, str]:
-        settings = request.app.state.settings
-        return {
-            "name": settings.app_name,
-            "status": "online",
-            "health": f"{api_prefix}/health",
-            "api": api_prefix,
-            "version": settings.app_version,
-        }
-
     app.include_router(health_router, prefix=api_prefix)
     app.include_router(clinic_days_router, prefix=api_prefix)
     app.include_router(narratives_router, prefix=api_prefix)
+
+    frontend_dist = _frontend_dist_dir()
+    frontend_index = frontend_dist / "index.html"
+    frontend_assets = frontend_dist / "assets"
+
+    if frontend_index.is_file():
+        if frontend_assets.is_dir():
+            app.mount("/assets", StaticFiles(directory=frontend_assets), name="frontend-assets")
+
+        @app.get("/", include_in_schema=False)
+        @app.get("/reports", include_in_schema=False)
+        @app.get("/reports/{path:path}", include_in_schema=False)
+        def frontend_app() -> FileResponse:
+            return FileResponse(frontend_index)
+    else:
+        @app.get("/", include_in_schema=False)
+        def root_status(request: Request) -> dict[str, str]:
+            settings = request.app.state.settings
+            return {
+                "name": settings.app_name,
+                "status": "online",
+                "health": f"{api_prefix}/health",
+                "api": api_prefix,
+                "version": settings.app_version,
+            }
 
     def custom_openapi():
         if app.openapi_schema:
