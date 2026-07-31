@@ -12,6 +12,7 @@ export type HealthStatus = {
 };
 
 const CHECK_INTERVAL_MS = 60_000;
+const RECOVERY_RETRY_MS = 3_000;
 
 function labelFor(state: HealthState): string {
   if (state === "healthy") {
@@ -34,6 +35,7 @@ export function useHealthStatus(): HealthStatus {
     checkedAt: null,
   }));
   const inFlight = useRef(false);
+  const failures = useRef(0);
 
   useEffect(() => {
     if (!online) {
@@ -42,6 +44,7 @@ export function useHealthStatus(): HealthStatus {
     }
 
     const controller = new AbortController();
+    let retry: number | undefined;
     const check = async () => {
       if (inFlight.current) {
         return;
@@ -50,10 +53,16 @@ export function useHealthStatus(): HealthStatus {
       try {
         const response = await getHealth(controller.signal);
         const nextState: HealthState = response.status === "ok" || response.status === "healthy" ? "healthy" : "degraded";
+        failures.current = 0;
         setStatus({ state: nextState, label: labelFor(nextState), checkedAt: new Date() });
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setStatus({ state: "unavailable", label: labelFor("unavailable"), checkedAt: new Date() });
+          failures.current += 1;
+          const nextState: HealthState = failures.current >= 2 ? "unavailable" : "checking";
+          setStatus({ state: nextState, label: labelFor(nextState), checkedAt: new Date() });
+          retry = window.setTimeout(() => {
+            void check();
+          }, RECOVERY_RETRY_MS);
         }
       } finally {
         inFlight.current = false;
@@ -61,13 +70,28 @@ export function useHealthStatus(): HealthStatus {
     };
 
     void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void check();
+      }
+    };
+    const onOnline = () => {
+      void check();
+    };
     const interval = window.setInterval(() => {
       void check();
     }, CHECK_INTERVAL_MS);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
 
     return () => {
       controller.abort();
+      if (retry !== undefined) {
+        window.clearTimeout(retry);
+      }
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
     };
   }, [online]);
 

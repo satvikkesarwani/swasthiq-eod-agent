@@ -101,7 +101,7 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
 
   return (
     <GlassPanel title="Import billing log" description="Select a clinic day and submit the exact JSON array to the billing service.">
-      <form onSubmit={onSubmit} aria-busy={state.status === "submitting"}>
+      <form className={styles.importForm} onSubmit={onSubmit} aria-busy={state.status === "submitting"}>
         {Object.keys(fieldErrors).length > 0 && (
           <InlineError message="Some import fields need attention before submission." />
         )}

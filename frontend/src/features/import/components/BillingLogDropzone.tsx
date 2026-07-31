@@ -64,7 +64,7 @@ export function BillingLogDropzone({ parsedFile, error, reading, onFilesSelected
           onFilesSelected(event.dataTransfer.files);
         }}
       >
-        <div>
+        <div className={styles.dropzoneContent}>
           <Upload size={26} aria-hidden="true" />
           <p><strong>{dragActive ? "Release to check this JSON file" : "Drag and drop a JSON billing log here"}</strong></p>
           <p id={helperId} className={styles.hint}>

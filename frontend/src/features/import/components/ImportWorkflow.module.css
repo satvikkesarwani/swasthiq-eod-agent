@@ -10,6 +10,11 @@
   gap: var(--space-4);
 }
 
+.importForm {
+  display: grid;
+  gap: var(--space-5);
+}
+
 .field {
   display: grid;
   gap: var(--space-2);
@@ -43,13 +48,28 @@
 
 .dropzone {
   display: grid;
-  min-height: 12rem;
+  min-height: 15rem;
   place-items: center;
-  padding: var(--space-5);
+  padding: var(--space-6);
   text-align: center;
   background: rgba(87, 167, 255, 0.06);
   border: 1px dashed rgba(99, 216, 215, 0.48);
   border-radius: var(--radius-md);
+}
+
+.dropzoneContent {
+  display: grid;
+  max-width: 42rem;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.dropzoneContent p {
+  margin: 0;
+}
+
+.dropzoneContent svg {
+  margin-bottom: var(--space-1);
 }
 
 .dropzoneActive {
@@ -108,6 +128,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+  align-items: center;
 }
 
 .checkbox {
@@ -169,5 +190,17 @@
 
   .formGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .dropzone {
+    min-height: 13rem;
+    padding: var(--space-4);
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
