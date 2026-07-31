@@ -51,7 +51,7 @@ describe("billing import workflow", () => {
     expect(clinicInput).toBeDefined();
     expect(dateInput).toBeDefined();
     await userEvent.type(clinicInput as HTMLElement, " CLN-TST-001 ");
-    await userEvent.type(dateInput as HTMLElement, "2026-07-31");
+    await userEvent.type(dateInput as HTMLElement, "31/07/2026");
     await userEvent.click(screen.getByLabelText("I understand this may replace the stored report for this clinic day."));
     const file = new File([JSON.stringify([{ ok: true }, "bad row"])], "billing.json", { type: "" });
     await userEvent.upload(screen.getByLabelText("Billing log JSON file"), file);
@@ -77,7 +77,7 @@ describe("billing import workflow", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Validate and generate report" }));
     expect(screen.getByText("Clinic ID is required.")).toBeVisible();
-    expect(screen.getByText("Business date is required in YYYY-MM-DD format.")).toBeVisible();
+    expect(screen.getByText("Business date is required as DD/MM/YYYY or YYYY-MM-DD.")).toBeVisible();
     expect(screen.getByText("Choose a JSON billing log.")).toBeVisible();
 
     const badFile = new File(["[]"], "billing.txt", { type: "text/plain" });

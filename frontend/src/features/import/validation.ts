@@ -3,6 +3,7 @@ import { BACKEND_REQUEST_LIMIT_BYTES, BILLING_FILE_LIMIT_LABEL, MAX_BILLING_FILE
 import type { BillingFileError } from "./types";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DISPLAY_DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 
 export function validateBillingFile(file: File): BillingFileError | null {
   const name = file.name.trim();
@@ -35,11 +36,21 @@ export function validateDroppedFiles(files: FileList | File[]): BillingFileError
 }
 
 export function isValidBusinessDateInput(value: string): boolean {
-  if (!DATE_RE.test(value)) {
-    return false;
+  return normalizeBusinessDateInput(value) !== null;
+}
+
+export function normalizeBusinessDateInput(value: string): string | null {
+  const trimmed = value.trim();
+  const displayMatch = DISPLAY_DATE_RE.exec(trimmed);
+  const candidate = displayMatch
+    ? `${displayMatch[3]}-${displayMatch[2]}-${displayMatch[1]}`
+    : trimmed;
+
+  if (!DATE_RE.test(candidate)) {
+    return null;
   }
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  const date = new Date(`${candidate}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === candidate ? candidate : null;
 }
 
 export function trimOptional(value: string): string | undefined {

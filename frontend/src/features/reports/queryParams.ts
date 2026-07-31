@@ -1,4 +1,4 @@
-import { isValidBusinessDateInput } from "../import/validation";
+import { normalizeBusinessDateInput } from "../import/validation";
 
 export const RECENT_REPORTS_LIMIT = 10;
 
@@ -27,8 +27,8 @@ export function parseReportsQuery(search: string): ReportsQuery {
   const clinicId = params.get("clinic_id")?.trim() || undefined;
   const dateFromRaw = params.get("date_from")?.trim();
   const dateToRaw = params.get("date_to")?.trim();
-  const dateFrom = dateFromRaw && isValidBusinessDateInput(dateFromRaw) ? dateFromRaw : undefined;
-  const dateTo = dateToRaw && isValidBusinessDateInput(dateToRaw) ? dateToRaw : undefined;
+  const dateFrom = dateFromRaw ? normalizeBusinessDateInput(dateFromRaw) ?? undefined : undefined;
+  const dateTo = dateToRaw ? normalizeBusinessDateInput(dateToRaw) ?? undefined : undefined;
   const limit = Math.min(RECENT_REPORTS_LIMIT, positiveInt(params.get("limit"), RECENT_REPORTS_LIMIT) || RECENT_REPORTS_LIMIT);
   const offset = positiveInt(params.get("offset"), 0);
   const rangeError = dateFrom && dateTo && dateFrom > dateTo ? "Date from cannot be after date to." : null;

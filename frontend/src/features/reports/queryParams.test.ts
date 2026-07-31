@@ -4,7 +4,7 @@ import { parseReportsQuery, reportsQueryToSearch } from "./queryParams";
 
 describe("report query params", () => {
   it("parses and serializes filters and pagination", () => {
-    const query = parseReportsQuery("?clinic_id=CLN&date_from=2026-07-01&date_to=2026-07-31&offset=10&limit=10");
+    const query = parseReportsQuery("?clinic_id=CLN&date_from=01/07/2026&date_to=2026-07-31&offset=10&limit=10");
     expect(query).toMatchObject({ clinicId: "CLN", dateFrom: "2026-07-01", dateTo: "2026-07-31", offset: 10, rangeError: null });
     expect(reportsQueryToSearch(query)).toContain("clinic_id=CLN");
   });

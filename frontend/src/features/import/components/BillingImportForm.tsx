@@ -8,7 +8,7 @@ import { StatusPill } from "../../../components/primitives/StatusPill";
 import type { ClinicDaySummary } from "../../../api/types";
 import { useBillingFileState } from "../hooks/useBillingFile";
 import { useBillingImport } from "../hooks/useBillingImport";
-import { isValidBusinessDateInput, trimOptional } from "../validation";
+import { normalizeBusinessDateInput, trimOptional } from "../validation";
 import { BillingLogDropzone } from "./BillingLogDropzone";
 import { ImportResultPanel } from "./ImportResultPanel";
 import type { ImportResult } from "../types";
@@ -38,7 +38,8 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
   const { submitImport } = useBillingImport(state, dispatch);
 
   const trimmedClinicId = clinicId.trim();
-  const existingReport = recentReports.some((report) => report.clinic_id === trimmedClinicId && report.business_date === businessDate);
+  const normalizedBusinessDate = normalizeBusinessDateInput(businessDate);
+  const existingReport = normalizedBusinessDate !== null && recentReports.some((report) => report.clinic_id === trimmedClinicId && report.business_date === normalizedBusinessDate);
   const isEmptyDay = state.parsedFile?.isEmpty ?? false;
   const canSubmit = state.status !== "reading_file" && state.status !== "submitting";
 
@@ -47,8 +48,8 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
     if (!trimmedClinicId) {
       errors.clinicId = "Clinic ID is required.";
     }
-    if (!businessDate || !isValidBusinessDateInput(businessDate)) {
-      errors.businessDate = "Business date is required in YYYY-MM-DD format.";
+    if (normalizedBusinessDate === null) {
+      errors.businessDate = "Business date is required as DD/MM/YYYY or YYYY-MM-DD.";
     }
     if (state.parsedFile === null) {
       errors.file = "Choose a JSON billing log.";
@@ -73,14 +74,19 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    dispatch({ type: "form_changed" });
     if (!validate()) {
+      return;
+    }
+    const dateForSubmit = normalizeBusinessDateInput(businessDate);
+    if (dateForSubmit === null) {
       return;
     }
     void submitImport({
       clinicId: trimmedClinicId,
       clinicName: trimOptional(clinicName) ?? "",
       clinicLocation: trimOptional(clinicLocation) ?? "",
-      businessDate,
+      businessDate: dateForSubmit,
     });
   };
 
@@ -128,8 +134,10 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
             <input
               ref={dateRef}
               id={businessDateId}
-              type="date"
+              type="text"
               value={businessDate}
+              inputMode="numeric"
+              placeholder="dd/mm/yyyy"
               aria-invalid={Boolean(fieldErrors.businessDate)}
               aria-describedby={fieldErrors.businessDate ? `${businessDateId}-error` : undefined}
               onChange={(event) => {
