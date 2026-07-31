@@ -1,0 +1,30 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 10, 18, 0.72);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(26rem, calc(100vw - 2rem));
+  height: 100vh;
+  padding: var(--space-5);
+  background: var(--color-panel-strong);
+  border-left: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-panel);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+}

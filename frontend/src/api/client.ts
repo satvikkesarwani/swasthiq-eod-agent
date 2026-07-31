@@ -1,0 +1,106 @@
+import type { ApiErrorPayload } from "./types";
+
+const API_PREFIX = "/api/v1";
+
+export type ApiRequestOptions = {
+  method?: "GET" | "POST" | "PUT";
+  body?: unknown;
+  signal?: AbortSignal;
+};
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly requestId: string | null;
+  readonly details: unknown[];
+
+  constructor(message: string, status: number, code: string, requestId: string | null, details: unknown[] = []) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+    this.details = details;
+  }
+}
+
+export function normalizeApiBase(rawBase?: string): string {
+  const meta = import.meta as ImportMeta & { env: { VITE_API_BASE_URL?: string } };
+  const envBase = meta.env.VITE_API_BASE_URL;
+  const candidate = rawBase ?? envBase ?? "";
+  const trimmed = candidate.trim().replace(/\/+$/, "");
+  return trimmed.endsWith(API_PREFIX) ? trimmed.slice(0, -API_PREFIX.length) : trimmed;
+}
+
+export function apiUrl(path: string, query?: URLSearchParams): string {
+  const base = normalizeApiBase();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const qs = query && [...query.keys()].length > 0 ? `?${query.toString()}` : "";
+  return `${base}${API_PREFIX}${normalizedPath}${qs}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+async function parseJson(response: Response): Promise<unknown> {
+  if (response.status === 204) {
+    return undefined;
+  }
+  const text = await response.text();
+  if (text.length === 0) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ApiError("The server returned malformed JSON.", response.status, "MALFORMED_JSON", null);
+  }
+}
+
+function toApiError(payload: unknown, status: number, fallbackRequestId: string | null): ApiError {
+  const envelope = payload as Partial<ApiErrorPayload>;
+  const body = isRecord(envelope.error) ? envelope.error : null;
+  const code = typeof body?.code === "string" ? body.code : "HTTP_ERROR";
+  const message = typeof body?.message === "string" ? body.message : "The server request failed.";
+  const requestId = typeof body?.request_id === "string" ? body.request_id : fallbackRequestId;
+  const details = Array.isArray(body?.details) ? body.details : [];
+  return new ApiError(message, status, code, requestId, details);
+}
+
+export async function requestJson<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const headers = new Headers({ Accept: "application/json" });
+  let body: string | undefined;
+  if (options.body !== undefined) {
+    headers.set("Content-Type", "application/json");
+    body = JSON.stringify(options.body);
+  }
+
+  let response: Response;
+  try {
+    const init: RequestInit = {
+      method: options.method ?? "GET",
+      headers,
+      credentials: "same-origin",
+    };
+    if (body !== undefined) {
+      init.body = body;
+    }
+    if (options.signal !== undefined) {
+      init.signal = options.signal;
+    }
+    response = await fetch(apiUrl(path), init);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    throw new ApiError("Unable to reach the server.", 0, "NETWORK_ERROR", null);
+  }
+
+  const requestId = response.headers.get("x-request-id");
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw toApiError(payload, response.status, requestId);
+  }
+  return payload as T;
+}

@@ -1,0 +1,46 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(237, 247, 251, 0.08);
+  border: 1px solid rgba(237, 247, 251, 0.14);
+  border-radius: 999px;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.healthy,
+.online {
+  color: var(--color-green);
+}
+
+.checking,
+.neutral {
+  color: var(--color-blue);
+}
+
+.degraded,
+.warning,
+.fallback {
+  color: var(--color-yellow);
+}
+
+.unavailable,
+.error {
+  color: var(--color-red);
+}
+
+.ai {
+  color: var(--color-lavender);
+}

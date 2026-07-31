@@ -1,0 +1,99 @@
+.banner,
+.state,
+.toast {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(9, 24, 39, 0.82);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-yellow);
+}
+
+.state {
+  display: grid;
+  min-height: 16rem;
+  place-items: center;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.state h2,
+.state h3,
+.state p {
+  margin: 0;
+}
+
+.state p {
+  max-width: 36rem;
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.skeletonStack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.skeleton {
+  height: 1rem;
+  overflow: hidden;
+  background: rgba(237, 247, 251, 0.08);
+  border-radius: var(--radius-xs);
+}
+
+.skeleton::after {
+  display: block;
+  width: 45%;
+  height: 100%;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(237, 247, 251, 0.18), transparent);
+  animation: skeleton-shimmer 1200ms ease-in-out infinite;
+}
+
+.toastRegion {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--mobile-nav-height) + var(--space-4));
+  z-index: 40;
+  display: grid;
+  gap: var(--space-2);
+  width: min(24rem, calc(100vw - 2rem));
+}
+
+.toast {
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-panel);
+}
+
+.toast p {
+  margin: 0;
+}
+
+.inlineError {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-red);
+  background: rgba(255, 139, 139, 0.09);
+  border: 1px solid rgba(255, 139, 139, 0.36);
+  border-radius: var(--radius-sm);
+}
+
+@media (min-width: 860px) {
+  .toastRegion {
+    bottom: var(--space-4);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(240%);
+  }
+}

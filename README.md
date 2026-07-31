@@ -10,8 +10,9 @@ Implementation workspace for a Python REST API and React interface that converts
 - Prompt 2: Persistence, Alembic migrations, hashing/versioning, REST contract, and OpenAPI artifact finalized.
 - Prompt 3: LangChain + NVIDIA `ChatNVIDIA` narrative provider integrated behind deterministic grounding and safe fallback.
 - Prompt 4: Complete grounded narrative pipeline, intent policy, semantic repair, and deterministic fallback finalized.
+- Prompt 5: React frontend foundation, typed OpenAPI client, design system, app shell, and placeholder routes finalized.
 - Pre-coding package for Steps 4–7: complete.
-- Remaining coding: React interface, CI, deployment, and production hardening outside Prompt 1 scope.
+- Remaining coding: full frontend business workflows, CI, deployment, and production hardening outside Prompt 5 scope.
 
 ## Locked stack
 
@@ -61,6 +62,24 @@ Prompt 2 persistence and API contract details are recorded in [`docs/implementat
 Prompt 3 LangChain + NVIDIA provider details are recorded in [`docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md`](docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md).
 
 Prompt 4 grounded narrative pipeline details are recorded in [`docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md`](docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md).
+
+Prompt 5 frontend foundation details are recorded in [`docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md`](docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md).
+
+## Frontend verification
+
+From `frontend/`, run:
+
+```bash
+npm install
+npm run generate:api
+npm run typecheck
+npm run lint
+npm run test:run
+npm run test:coverage
+npm run build
+```
+
+The frontend defaults to same-origin `/api/v1`. Set `VITE_DEV_PROXY_TARGET` for the local backend proxy and `VITE_API_BASE_URL` only when using a separate backend origin.
 
 ## Database and Migrations
 

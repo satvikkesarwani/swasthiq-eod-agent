@@ -1,0 +1,40 @@
+body {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top left, rgba(87, 167, 255, 0.16), transparent 34rem),
+    linear-gradient(135deg, #06111f 0%, #081622 52%, #10192b 100%);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+#overlay-root {
+  position: relative;
+  z-index: 50;
+}
+
+::selection {
+  color: #04101d;
+  background: var(--color-teal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

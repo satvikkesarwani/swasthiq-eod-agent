@@ -1,0 +1,21 @@
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    scroll-behavior: smooth;
+  }
+
+  .motion-fade-in {
+    animation: motion-fade-in 180ms ease-out both;
+  }
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

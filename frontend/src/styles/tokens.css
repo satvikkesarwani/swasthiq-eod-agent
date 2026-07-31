@@ -1,0 +1,35 @@
+:root {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Space Mono", "SFMono-Regular", Consolas, monospace;
+  --color-bg: #06111f;
+  --color-bg-elevated: #0a1828;
+  --color-panel: rgba(13, 31, 51, 0.78);
+  --color-panel-strong: rgba(18, 42, 67, 0.92);
+  --color-border: rgba(142, 186, 208, 0.22);
+  --color-border-strong: rgba(99, 216, 215, 0.48);
+  --color-text: #edf7fb;
+  --color-text-muted: #a7b8c9;
+  --color-text-subtle: #74889a;
+  --color-blue: #57a7ff;
+  --color-teal: #63d8d7;
+  --color-lavender: #b8a7ff;
+  --color-green: #76d69b;
+  --color-yellow: #f4c86f;
+  --color-red: #ff8b8b;
+  --shadow-panel: 0 20px 70px rgba(0, 0, 0, 0.42);
+  --shadow-glow: 0 0 42px rgba(99, 216, 215, 0.16);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --topbar-height: 4.5rem;
+  --rail-width: 17rem;
+  --mobile-nav-height: 4.25rem;
+}
