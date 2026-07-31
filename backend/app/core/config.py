@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     app_env: Literal["development", "test", "production"] = "development"
     database_url: str = "sqlite:///./swasthiq_eod.db"
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"])
     max_records_per_request: int = Field(default=10_000, ge=1, le=100_000)
     max_request_body_bytes: int = Field(default=5_242_880, ge=1)
     store_rejected_raw_rows: bool = False

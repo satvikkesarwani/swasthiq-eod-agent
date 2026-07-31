@@ -45,6 +45,24 @@ describe("api client", () => {
     await expect(requestJson("/health")).rejects.toMatchObject({ code: "MALFORMED_JSON" });
   });
 
+  it("falls back to the local backend in dev when the same-origin proxy is unavailable", async () => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: new URL("http://127.0.0.1:5173/reports"),
+    });
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("proxy refused"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "healthy" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(requestJson<{ status: string }>("/health")).resolves.toEqual({ status: "healthy" });
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "/api/v1/health",
+      "http://127.0.0.1:8000/api/v1/health",
+    ]);
+  });
+
   it("builds typed endpoint paths", async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 })));
     vi.stubGlobal("fetch", fetchMock);

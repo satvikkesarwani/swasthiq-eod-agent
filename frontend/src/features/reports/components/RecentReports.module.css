@@ -24,15 +24,10 @@
 }
 
 .filterActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-2);
-  align-items: end;
-}
-
-.filterActions > * {
-  flex: 1 1 8rem;
-  white-space: nowrap;
+  align-items: stretch;
 }
 
 .activeFilters {
@@ -101,8 +96,12 @@
 
 @media (min-width: 760px) {
   .filters {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
     align-items: end;
+  }
+
+  .filterActions {
+    grid-template-columns: auto auto;
   }
 
   .row {
@@ -116,8 +115,7 @@
 }
 
 @media (max-width: 520px) {
-  .filterActions {
-    flex-direction: column;
-    align-items: stretch;
+  .filterActions > * {
+    width: 100%;
   }
 }

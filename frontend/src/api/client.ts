@@ -39,6 +39,25 @@ export function apiUrl(path: string, query?: URLSearchParams): string {
   return `${base}${API_PREFIX}${normalizedPath}${qs}`;
 }
 
+function localDevFallbackUrl(path: string, query?: URLSearchParams): string | null {
+  const meta = import.meta as ImportMeta & { env: { DEV?: boolean; VITE_API_BASE_URL?: string } };
+  if (meta.env.VITE_API_BASE_URL || !meta.env.DEV || typeof window === "undefined") {
+    return null;
+  }
+  if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    return null;
+  }
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const qs = query && [...query.keys()].length > 0 ? `?${query.toString()}` : "";
+  return `http://127.0.0.1:8000${API_PREFIX}${normalizedPath}${qs}`;
+}
+
+function apiUrlCandidates(path: string, query?: URLSearchParams): string[] {
+  const primary = apiUrl(path, query);
+  const fallback = localDevFallbackUrl(path, query);
+  return fallback && fallback !== primary ? [primary, fallback] : [primary];
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -76,7 +95,7 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
     body = JSON.stringify(options.body);
   }
 
-  let response: Response;
+  let response: Response | undefined;
   try {
     const init: RequestInit = {
       method: options.method ?? "GET",
@@ -89,7 +108,23 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
     if (options.signal !== undefined) {
       init.signal = options.signal;
     }
-    response = await fetch(apiUrl(path), init);
+    const urls = apiUrlCandidates(path);
+    for (const [index, url] of urls.entries()) {
+      try {
+        response = await fetch(url, init);
+        break;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw error;
+        }
+        if (index === urls.length - 1) {
+          throw new TypeError(error instanceof Error ? error.message : "Network request failed.");
+        }
+      }
+    }
+    if (response === undefined) {
+      throw new TypeError("Network request failed.");
+    }
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw error;
