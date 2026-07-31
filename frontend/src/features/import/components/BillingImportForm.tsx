@@ -58,8 +58,10 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
     if (existingReport && !confirmReplacement) {
       errors.confirmReplacement = "Confirm replacement before submitting this clinic day.";
     }
-    if (existingReport && isEmptyDay && !confirmEmpty) {
-      errors.confirmEmpty = "Confirm empty-day replacement before submitting.";
+    if (isEmptyDay && !confirmEmpty) {
+      errors.confirmEmpty = existingReport
+        ? "Confirm empty-day replacement before submitting."
+        : "Confirm this empty billing log before creating a no-activity report.";
     }
     setFieldErrors(errors);
     logDiagnostic(Object.keys(errors).length === 0 ? "info" : "warn", "import.form", "Submit validation result", {
@@ -187,10 +189,14 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
           reading={state.status === "reading_file"}
           onFilesSelected={(files) => {
             setFieldErrors({});
+            setConfirmEmpty(false);
             dispatch({ type: "form_changed" });
             selectFiles(files);
           }}
-          onRemove={() => dispatch({ type: "remove_file" })}
+          onRemove={() => {
+            setConfirmEmpty(false);
+            dispatch({ type: "remove_file" });
+          }}
         />
 
         {existingReport && (
@@ -205,13 +211,15 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
           </div>
         )}
 
-        {existingReport && isEmptyDay && (
+        {isEmptyDay && (
           <div className={styles.warning}>
             <StatusPill tone="neutral">Empty clinic day</StatusPill>
-            <p className={styles.hint}>This will create or replace the selected clinic day with a no-activity report.</p>
+            <p className={styles.hint}>
+              This JSON file contains zero billing rows. Submitting it will create a no-activity report with zero analytics for the selected clinic day.
+            </p>
             <label className={styles.checkbox}>
               <input type="checkbox" checked={confirmEmpty} onChange={(event) => setConfirmEmpty(event.target.checked)} />
-              <span>I understand this empty day may replace an existing report.</span>
+              <span>{existingReport ? "I understand this empty day may replace an existing report." : "I understand this file has no rows and will generate zero totals."}</span>
             </label>
             {fieldErrors.confirmEmpty && <p className={styles.error}>{fieldErrors.confirmEmpty}</p>}
           </div>

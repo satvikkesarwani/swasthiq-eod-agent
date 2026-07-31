@@ -1,5 +1,6 @@
 import type { ClinicDayDetail } from "../../api/types";
 import { formatCount, formatPaise } from "../../lib/formatters";
+import { logDiagnostic } from "../../lib/diagnostics";
 import type { AnalyticsContext, HourRevenuePoint } from "./types";
 
 function hourLabel(hour: number): string {
@@ -58,6 +59,11 @@ export function mapHourlyRevenue(report: ClinicDayDetail): HourRevenuePoint[] {
 export function getAnalyticsContext(report: ClinicDayDetail): AnalyticsContext {
   const reconciliation = report.report.reconciliation;
   if (report.ingestion.rejected_rows > 0 && report.ingestion.accepted_rows > 0) {
+    logDiagnostic("info", "analytics.presentation", "Analytics context partial", {
+      receivedRows: report.ingestion.received_rows,
+      acceptedRows: report.ingestion.accepted_rows,
+      rejectedRows: report.ingestion.rejected_rows,
+    });
     return {
       kind: "partial",
       title: "Analytics use accepted rows only",
@@ -65,17 +71,42 @@ export function getAnalyticsContext(report: ClinicDayDetail): AnalyticsContext {
     };
   }
   if (report.ingestion.received_rows === 0 && reconciliation.total_billed_paise === 0 && reconciliation.total_refunds_paise === 0) {
+    logDiagnostic("warn", "analytics.presentation", "Analytics context empty day", {
+      clinicId: report.clinic_id,
+      businessDate: report.business_date,
+      receivedRows: report.ingestion.received_rows,
+      acceptedRows: report.ingestion.accepted_rows,
+      totalBilledPaise: reconciliation.total_billed_paise,
+      totalRefundsPaise: reconciliation.total_refunds_paise,
+    });
     return { kind: "empty", title: "No billing activity", message: "No billing activity was recorded for this clinic day." };
   }
   if (reconciliation.total_billed_paise === 0 && reconciliation.total_refunds_paise > 0) {
+    logDiagnostic("info", "analytics.presentation", "Analytics context refund only", {
+      totalRefundsPaise: reconciliation.total_refunds_paise,
+    });
     return { kind: "refund_only", title: "Refund-only day", message: "No new sales were recorded. Refund activity is available in Reconciliation." };
   }
   if (reconciliation.total_billed_paise > 0 && reconciliation.total_refunds_paise > 0) {
+    logDiagnostic("info", "analytics.presentation", "Analytics context sales and refunds", {
+      totalBilledPaise: reconciliation.total_billed_paise,
+      totalRefundsPaise: reconciliation.total_refunds_paise,
+    });
     return { kind: "sales_and_refunds", title: "Sales analytics exclude refund entries", message: "Refund totals remain available in Reconciliation." };
   }
   if (reconciliation.total_billed_paise > 0) {
+    logDiagnostic("info", "analytics.presentation", "Analytics context sales", {
+      totalBilledPaise: reconciliation.total_billed_paise,
+    });
     return { kind: "sales", title: "Sales analytics loaded", message: "Charts and rankings use accepted non-refund sales from the deterministic report." };
   }
+  logDiagnostic("warn", "analytics.presentation", "Analytics context no accepted sales", {
+    receivedRows: report.ingestion.received_rows,
+    acceptedRows: report.ingestion.accepted_rows,
+    rejectedRows: report.ingestion.rejected_rows,
+    totalBilledPaise: reconciliation.total_billed_paise,
+    totalRefundsPaise: reconciliation.total_refunds_paise,
+  });
   return { kind: "no_sales", title: "No accepted sales analytics", message: "No accepted sales rows were available for analytics." };
 }
 

@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 
 from app.schemas.ingestion import ValidatedVisit
@@ -9,16 +10,27 @@ from app.schemas.report import (
     PeakHour,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def build_analytics(visits: list[ValidatedVisit], *, ranking_limit: int = 5) -> AnalyticsReport:
+    logger.info("analysis.analytics.start visits=%s ranking_limit=%s", len(visits), ranking_limit)
     hourly = {hour: 0 for hour in range(24)}
     quantity: dict[str, int] = defaultdict(int)
     revenue: dict[str, int] = defaultdict(int)
 
     for visit in visits:
         if visit.is_refund:
+            logger.debug("analysis.analytics.skip_refund visit_id=%s paid_paise=%s", visit.visit_id, visit.amount_paid_paise)
             continue
         hourly[visit.timestamp.hour] += visit.billed_paise
+        logger.debug(
+            "analysis.analytics.sale visit_id=%s hour_utc=%s billed_paise=%s items=%s",
+            visit.visit_id,
+            visit.timestamp.hour,
+            visit.billed_paise,
+            len(visit.line_items),
+        )
         for item in visit.line_items:
             quantity[item.drug_name_normalized] += item.qty
             revenue[item.drug_name_normalized] += item.gross_revenue_paise
@@ -37,6 +49,15 @@ def build_analytics(visits: list[ValidatedVisit], *, ranking_limit: int = 5) -> 
 
     quantity_items = sorted(quantity.items(), key=lambda item: (-item[1], item[0]))[:ranking_limit]
     revenue_items = sorted(revenue.items(), key=lambda item: (-item[1], item[0]))[:ranking_limit]
+    logger.info(
+        "analysis.analytics.done visits=%s positive_hours=%s peak_hour=%s quantity_rankings=%s revenue_rankings=%s total_sales_revenue=%s",
+        len(visits),
+        len(positive_hours),
+        peak_hour.model_dump(mode="json") if peak_hour is not None else None,
+        len(quantity_items),
+        len(revenue_items),
+        sum(hourly.values()),
+    )
 
     return AnalyticsReport(
         revenue_by_hour=hourly_rows,

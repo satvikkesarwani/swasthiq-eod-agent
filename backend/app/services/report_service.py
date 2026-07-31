@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import json
 from itertools import combinations
@@ -7,6 +8,8 @@ from app.schemas.ingestion import ValidatedVisit
 from app.schemas.report import DataQualityWarning, DeterministicReport
 from app.services.analytics_service import build_analytics
 from app.services.reconciliation_service import build_reconciliation
+
+logger = logging.getLogger(__name__)
 
 
 def canonical_hash(payload: Any) -> str:
@@ -71,6 +74,7 @@ def _edit_distance_at_most_one(left: str, right: str) -> bool:
 
 
 def build_data_quality_warnings(visits: list[ValidatedVisit]) -> list[DataQualityWarning]:
+    logger.info("analysis.quality.start visits=%s", len(visits))
     names = sorted(
         {
             item.drug_name_normalized
@@ -82,6 +86,7 @@ def build_data_quality_warnings(visits: list[ValidatedVisit]) -> list[DataQualit
     warnings: list[DataQualityWarning] = []
     for left, right in combinations(names, 2):
         if _edit_distance_at_most_one(left, right):
+            logger.warning("analysis.quality.warning possible_typo left=%s right=%s", left, right)
             warnings.append(
                 DataQualityWarning(
                     code="POSSIBLE_MEDICINE_NAME_TYPO",
@@ -89,12 +94,26 @@ def build_data_quality_warnings(visits: list[ValidatedVisit]) -> list[DataQualit
                     details={"names": [left, right], "action": "review_source_data"},
                 )
             )
+    logger.info("analysis.quality.done medicine_names=%s warnings=%s", len(names), len(warnings))
     return warnings
 
 
 def build_deterministic_report(visits: list[ValidatedVisit]) -> DeterministicReport:
+    logger.info("analysis.report.start accepted_visits=%s", len(visits))
+    reconciliation = build_reconciliation(visits)
+    analytics = build_analytics(visits)
+    warnings = build_data_quality_warnings(visits)
+    logger.info(
+        "analysis.report.done accepted_visits=%s total_billed=%s total_collected=%s top_quantity=%s top_revenue=%s warnings=%s",
+        len(visits),
+        reconciliation.total_billed_paise,
+        reconciliation.total_collected_paise,
+        len(analytics.top_medicines_by_quantity),
+        len(analytics.top_medicines_by_revenue),
+        len(warnings),
+    )
     return DeterministicReport(
-        reconciliation=build_reconciliation(visits),
-        analytics=build_analytics(visits),
-        data_quality_warnings=build_data_quality_warnings(visits),
+        reconciliation=reconciliation,
+        analytics=analytics,
+        data_quality_warnings=warnings,
     )

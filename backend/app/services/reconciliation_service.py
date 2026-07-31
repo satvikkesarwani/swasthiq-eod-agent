@@ -1,8 +1,13 @@
+import logging
+
 from app.schemas.ingestion import PaymentMode, ValidatedVisit
 from app.schemas.report import PaymentModeMetrics, ReconciliationReport
 
+logger = logging.getLogger(__name__)
+
 
 def build_reconciliation(visits: list[ValidatedVisit]) -> ReconciliationReport:
+    logger.info("analysis.reconciliation.start visits=%s", len(visits))
     by_mode: dict[str, PaymentModeMetrics] = {
         mode.value: PaymentModeMetrics() for mode in PaymentMode
     }
@@ -21,6 +26,12 @@ def build_reconciliation(visits: list[ValidatedVisit]) -> ReconciliationReport:
             total_refunds += refund
             refund_count += 1
             mode.refunds_paise += refund
+            logger.debug(
+                "analysis.reconciliation.refund visit_id=%s mode=%s refund_paise=%s",
+                visit.visit_id,
+                visit.payment_mode.value,
+                refund,
+            )
             continue
 
         total_billed += visit.billed_paise
@@ -33,8 +44,28 @@ def build_reconciliation(visits: list[ValidatedVisit]) -> ReconciliationReport:
         mode.billed_paise += visit.billed_paise
         mode.collected_paise += visit.amount_paid_paise
         mode.outstanding_paise += visit.outstanding_paise
+        logger.debug(
+            "analysis.reconciliation.sale visit_id=%s mode=%s billed_paise=%s collected_paise=%s outstanding_paise=%s discount_paise=%s",
+            visit.visit_id,
+            visit.payment_mode.value,
+            visit.billed_paise,
+            visit.amount_paid_paise,
+            visit.outstanding_paise,
+            visit.discount_paise,
+        )
 
     collection_rate = round(total_collected / total_billed, 6) if total_billed else None
+    logger.info(
+        "analysis.reconciliation.done visits=%s total_billed=%s total_collected=%s total_outstanding=%s total_refunds=%s pending=%s refund_count=%s collection_rate=%s",
+        len(visits),
+        total_billed,
+        total_collected,
+        total_outstanding,
+        total_refunds,
+        pending_count,
+        refund_count,
+        collection_rate,
+    )
     return ReconciliationReport(
         total_billed_paise=total_billed,
         total_collected_paise=total_collected,
