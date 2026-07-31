@@ -53,7 +53,7 @@ export function Drawer({ open, title, onClose, children }: DrawerProps) {
       <aside className={styles.drawer} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>{title}</h2>
-          <IconButton ref={closeRef} label="Close drawer" onClick={onClose}>
+          <IconButton ref={closeRef} label="Close drawer" onClick={onClose} variant="secondary">
             <X size={18} aria-hidden="true" />
           </IconButton>
         </div>

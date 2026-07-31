@@ -7,6 +7,7 @@ import { Badge } from "../../../components/primitives/Badge";
 import { InlineError } from "../../../components/feedback/InlineError";
 import { LoadingSkeleton } from "../../../components/feedback/LoadingSkeleton";
 import { reportRoutes } from "../../../app/routes";
+import { classNames } from "../../../lib/classNames";
 import type { ImportResult, SafeIssue } from "../types";
 import styles from "./ImportWorkflow.module.css";
 
@@ -65,12 +66,12 @@ export function ValidationIssuesDrawer({ open, result, onClose }: ValidationIssu
   return (
     <Drawer open={open} title="Validation issues" onClose={onClose}>
       {result && (
-        <div className={styles.fileCard}>
+        <div className={classNames(styles.fileCard, styles.drawerSummary)}>
           <div className={styles.metaGrid}>
             <div><span>Clinic</span><strong>{result.clinicId}</strong></div>
             <div><span>Date</span><strong>{result.businessDate}</strong></div>
             <div><span>Rejected rows</span><strong>{result.rejectedRows}</strong></div>
-            <div><span>Status</span><strong>{result.status}</strong></div>
+            <div><span>Status</span><strong className={styles.statusValue}>{result.status.replaceAll("_", " ")}</strong></div>
           </div>
         </div>
       )}
@@ -79,13 +80,13 @@ export function ValidationIssuesDrawer({ open, result, onClose }: ValidationIssu
       <ul className={styles.issueList}>
         {issues.map((issue) => (
           <li key={`${issue.row_index}-${issue.field_path ?? "row"}-${issue.error_code}-${issue.message}`}>
-            <div className={styles.actions}>
+            <div className={styles.issueBadges}>
               <Badge>Row {issue.row_index + 1}</Badge>
               <Badge>{issue.error_code}</Badge>
             </div>
-            <p>{issue.message}</p>
+            <p className={styles.issueMessage}>{issue.message}</p>
             <p>{issue.field_path ? `Field: ${issue.field_path}` : "Field: row"}</p>
-            {issue.visit_id && <p>Visit ID: {issue.visit_id}</p>}
+            {issue.visit_id && <p className={styles.issueMeta}>Visit ID: {issue.visit_id}</p>}
           </li>
         ))}
       </ul>
