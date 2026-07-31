@@ -1,0 +1,73 @@
+# SwasthiQ EOD Billing & Analytics Agent
+
+Implementation workspace for a Python REST API and React interface that converts a clinic-day billing log into deterministic reconciliation, analytics, and a figure-traced owner-facing narrative.
+
+## Current status
+
+- Step 1: Requirements specification complete.
+- Step 2: Architecture, API contract, data model, and user flows complete.
+- Step 3: Deterministic backend stabilized for Prompt 1. Current backend gate: 47 tests passing and 91.67% branch coverage.
+- Pre-coding package for Steps 4–7: complete.
+- Remaining coding: LangChain + NVIDIA integration, React interface, CI, deployment, and production hardening outside Prompt 1 scope.
+
+## Locked stack
+
+- Backend: Python, FastAPI, Pydantic v2, SQLAlchemy 2, SQLite.
+- Agentic layer: LangChain, `langchain-nvidia-ai-endpoints`, `ChatNVIDIA`, NVIDIA Nemotron.
+- Frontend: React, Vite, TypeScript, React Router, Recharts.
+- Deployment plan: Vercel frontend and Railway backend with a persistent volume for SQLite.
+
+## Backend configuration
+
+The deterministic backend uses integer paise for all money calculations and does not call an LLM. Important local settings are documented in [`backend/.env.example`](backend/.env.example):
+
+- `MAX_RECORDS_PER_REQUEST=10000`
+- `MAX_REQUEST_BODY_BYTES=5242880`
+- `STORE_REJECTED_RAW_ROWS=false`
+
+Rejected-row API responses expose only safe, actionable issue fields. Complete malformed source rows are not persisted unless `STORE_REJECTED_RAW_ROWS=true` is explicitly enabled for local development/testing.
+
+## Backend verification
+
+From `backend/`, run:
+
+```bash
+python3 -m pytest -q
+python3 -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+python3 -c "from app.main import create_app; create_app()"
+```
+
+On this machine, `python` is not available on `PATH`; use `python3`.
+
+Prompt 1 stabilization details are recorded in [`docs/implementation/01_BACKEND_STABILIZATION_REPORT.md`](docs/implementation/01_BACKEND_STABILIZATION_REPORT.md).
+
+## Core design documents
+
+- [`docs/STEP_1_REQUIREMENTS.md`](docs/STEP_1_REQUIREMENTS.md)
+- [`docs/STEP_2_SYSTEM_DESIGN.md`](docs/STEP_2_SYSTEM_DESIGN.md)
+- [`docs/STEP_4_5_FORWARD_PLAN.md`](docs/STEP_4_5_FORWARD_PLAN.md)
+
+## Complete pre-coding package
+
+Start here:
+
+- [`docs/pre-coding/00_MASTER_READINESS.md`](docs/pre-coding/00_MASTER_READINESS.md)
+
+Detailed specifications:
+
+- [`01_STEP_3_BASELINE_AUDIT.md`](docs/pre-coding/01_STEP_3_BASELINE_AUDIT.md)
+- [`02_AGENTIC_LANGCHAIN_NVIDIA_SPEC.md`](docs/pre-coding/02_AGENTIC_LANGCHAIN_NVIDIA_SPEC.md)
+- [`03_FRONTEND_UI_UX_SPEC.md`](docs/pre-coding/03_FRONTEND_UI_UX_SPEC.md)
+- [`04_API_AND_DATA_CONTRACTS.md`](docs/pre-coding/04_API_AND_DATA_CONTRACTS.md)
+- [`05_QA_SECURITY_OBSERVABILITY_PLAN.md`](docs/pre-coding/05_QA_SECURITY_OBSERVABILITY_PLAN.md)
+- [`06_DEPLOYMENT_RELEASE_SUBMISSION_PLAN.md`](docs/pre-coding/06_DEPLOYMENT_RELEASE_SUBMISSION_PLAN.md)
+- [`07_REQUIREMENTS_TRACEABILITY_MATRIX.md`](docs/pre-coding/07_REQUIREMENTS_TRACEABILITY_MATRIX.md)
+- [`08_IMPLEMENTATION_BACKLOG.md`](docs/pre-coding/08_IMPLEMENTATION_BACKLOG.md)
+- [`09_RISK_REGISTER.md`](docs/pre-coding/09_RISK_REGISTER.md)
+- [`10_UI_COPY_DECK.md`](docs/pre-coding/10_UI_COPY_DECK.md)
+- [`11_DEFINITION_OF_DONE.md`](docs/pre-coding/11_DEFINITION_OF_DONE.md)
+- [`contracts/`](docs/pre-coding/contracts/) — current OpenAPI baseline and synthetic response examples.
+
+## Repository policy
+
+The original assignment PDF and supplied evaluation billing files are intentionally excluded from the public repository. Public tests and demo data must use independently created synthetic fixtures.

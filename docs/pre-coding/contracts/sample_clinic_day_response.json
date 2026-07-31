@@ -1,0 +1,188 @@
+{
+  "clinic_id": "CLN-DEMO-001",
+  "clinic_name": "Demo Multi-Specialty Clinic",
+  "clinic_location": "Kanpur, Uttar Pradesh",
+  "business_date": "2026-07-27",
+  "status": "completed_with_errors",
+  "ingestion": {
+    "received_rows": 4,
+    "accepted_rows": 3,
+    "rejected_rows": 1,
+    "errors": [
+      {
+        "row_index": 3,
+        "visit_id": "V-DEMO-004",
+        "field": "payment_mode",
+        "code": "FIELD_REQUIRED",
+        "message": "Field required"
+      }
+    ]
+  },
+  "report": {
+    "reconciliation": {
+      "total_billed_paise": 18000,
+      "total_collected_paise": 15000,
+      "total_outstanding_paise": 3000,
+      "total_refunds_paise": 0,
+      "total_discount_paise": 1000,
+      "collection_rate": 0.833333,
+      "pending_visit_count": 1,
+      "refund_visit_count": 0,
+      "by_payment_mode": {
+        "cash": {
+          "billed_paise": 6000,
+          "collected_paise": 6000,
+          "outstanding_paise": 0,
+          "refunds_paise": 0
+        },
+        "card": {
+          "billed_paise": 4000,
+          "collected_paise": 3000,
+          "outstanding_paise": 1000,
+          "refunds_paise": 0
+        },
+        "upi": {
+          "billed_paise": 8000,
+          "collected_paise": 6000,
+          "outstanding_paise": 2000,
+          "refunds_paise": 0
+        }
+      }
+    },
+    "analytics": {
+      "revenue_by_hour": [
+        {
+          "hour_utc": 0,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 1,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 2,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 3,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 4,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 5,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 6,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 7,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 8,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 9,
+          "revenue_paise": 6000
+        },
+        {
+          "hour_utc": 10,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 11,
+          "revenue_paise": 12000
+        },
+        {
+          "hour_utc": 12,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 13,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 14,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 15,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 16,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 17,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 18,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 19,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 20,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 21,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 22,
+          "revenue_paise": 0
+        },
+        {
+          "hour_utc": 23,
+          "revenue_paise": 0
+        }
+      ],
+      "peak_hour": {
+        "start_hour_utc": 11,
+        "end_hour_utc": 12,
+        "revenue_paise": 12000
+      },
+      "top_medicines_by_quantity": [
+        {
+          "rank": 1,
+          "drug_name": "PARACETAMOL",
+          "quantity": 3
+        },
+        {
+          "rank": 2,
+          "drug_name": "AMOXICILLIN",
+          "quantity": 2
+        }
+      ],
+      "top_medicines_by_revenue": [
+        {
+          "rank": 1,
+          "drug_name": "AMOXICILLIN",
+          "revenue_paise": 12000
+        },
+        {
+          "rank": 2,
+          "drug_name": "PARACETAMOL",
+          "revenue_paise": 6000
+        }
+      ]
+    },
+    "data_quality_warnings": []
+  },
+  "source_hash": "sha256:demo-source-hash",
+  "report_hash": "sha256:demo-report-hash",
+  "narrative_status": "not_generated",
+  "created_at": "2026-07-31T10:00:00Z",
+  "updated_at": "2026-07-31T10:00:00Z"
+}

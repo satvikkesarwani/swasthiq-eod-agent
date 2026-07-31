@@ -1,0 +1,80 @@
+{
+  "status": "generated",
+  "summary": "Good evening. ₹180 was billed across 3 valid visits, and ₹150 was collected (83.3%). ₹30 remains outstanding across 1 visit.\n\nThe busiest hour was 11am–12pm UTC, with ₹120 in billed revenue.\n\nTop by quantity: PARACETAMOL (3 units). Top by revenue: AMOXICILLIN (₹120).",
+  "traces": [
+    {
+      "display_value": "₹180",
+      "report_path": "reconciliation.total_billed_paise",
+      "raw_value": 18000
+    },
+    {
+      "display_value": "3",
+      "report_path": "ingestion.accepted_rows",
+      "raw_value": 3
+    },
+    {
+      "display_value": "₹150",
+      "report_path": "reconciliation.total_collected_paise",
+      "raw_value": 15000
+    },
+    {
+      "display_value": "83.3%",
+      "report_path": "reconciliation.collection_rate",
+      "raw_value": 0.833333
+    },
+    {
+      "display_value": "₹30",
+      "report_path": "reconciliation.total_outstanding_paise",
+      "raw_value": 3000
+    },
+    {
+      "display_value": "1",
+      "report_path": "reconciliation.pending_visit_count",
+      "raw_value": 1
+    },
+    {
+      "display_value": "11am–12pm UTC",
+      "report_path": "analytics.peak_hour.label",
+      "raw_value": {
+        "start_hour_utc": 11,
+        "end_hour_utc": 12
+      }
+    },
+    {
+      "display_value": "₹120",
+      "report_path": "analytics.peak_hour.revenue_paise",
+      "raw_value": 12000
+    },
+    {
+      "display_value": "PARACETAMOL",
+      "report_path": "analytics.top_medicines_by_quantity.0.drug_name",
+      "raw_value": "PARACETAMOL"
+    },
+    {
+      "display_value": "3",
+      "report_path": "analytics.top_medicines_by_quantity.0.quantity",
+      "raw_value": 3
+    },
+    {
+      "display_value": "AMOXICILLIN",
+      "report_path": "analytics.top_medicines_by_revenue.0.drug_name",
+      "raw_value": "AMOXICILLIN"
+    },
+    {
+      "display_value": "₹120",
+      "report_path": "analytics.top_medicines_by_revenue.0.revenue_paise",
+      "raw_value": 12000
+    }
+  ],
+  "unavailable_metrics": [
+    {
+      "metric": "profit",
+      "reason": "Cost-price data was not provided, so profit cannot be calculated."
+    }
+  ],
+  "report_hash": "sha256:demo-report-hash",
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "generation_ms": 1830,
+  "fallback_reason_code": null
+}

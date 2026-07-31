@@ -1,0 +1,998 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SwasthiQ EOD Billing & Analytics Agent",
+    "description": "Deterministic clinic-day billing reconciliation, analytics, and grounded narrative API.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clinic-days": {
+      "get": {
+        "tags": [
+          "clinic-days"
+        ],
+        "summary": "List Clinic Days",
+        "operationId": "list_clinic_days_api_v1_clinic_days_get",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clinic Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}": {
+      "put": {
+        "tags": [
+          "clinic-days"
+        ],
+        "summary": "Replace Clinic Day",
+        "operationId": "replace_clinic_day_api_v1_clinic_days__clinic_id___business_date__put",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "name": "business_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Business Date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingLogRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "clinic-days"
+        ],
+        "summary": "Get Clinic Day",
+        "operationId": "get_clinic_day_api_v1_clinic_days__clinic_id___business_date__get",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "name": "business_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Business Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}/errors": {
+      "get": {
+        "tags": [
+          "clinic-days"
+        ],
+        "summary": "Get Ingestion Errors",
+        "operationId": "get_ingestion_errors_api_v1_clinic_days__clinic_id___business_date__errors_get",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "name": "business_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Business Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Ingestion Errors Api V1 Clinic Days  Clinic Id   Business Date  Errors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}/narrative": {
+      "post": {
+        "tags": [
+          "narratives"
+        ],
+        "summary": "Generate Narrative",
+        "operationId": "generate_narrative_api_v1_clinic_days__clinic_id___business_date__narrative_post",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "name": "business_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Business Date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NarrativeGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrativeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "narratives"
+        ],
+        "summary": "Get Narrative",
+        "operationId": "get_narrative_api_v1_clinic_days__clinic_id___business_date__narrative_get",
+        "parameters": [
+          {
+            "name": "clinic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "name": "business_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Business Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrativeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyticsReport": {
+        "properties": {
+          "revenue_by_hour": {
+            "items": {
+              "$ref": "#/components/schemas/HourlyRevenue"
+            },
+            "type": "array",
+            "title": "Revenue By Hour"
+          },
+          "peak_hour": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeakHour"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "top_medicines_by_quantity": {
+            "items": {
+              "$ref": "#/components/schemas/MedicineQuantityRanking"
+            },
+            "type": "array",
+            "title": "Top Medicines By Quantity"
+          },
+          "top_medicines_by_revenue": {
+            "items": {
+              "$ref": "#/components/schemas/MedicineRevenueRanking"
+            },
+            "type": "array",
+            "title": "Top Medicines By Revenue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revenue_by_hour",
+          "peak_hour",
+          "top_medicines_by_quantity",
+          "top_medicines_by_revenue"
+        ],
+        "title": "AnalyticsReport"
+      },
+      "BillingLogRequest": {
+        "properties": {
+          "records": {
+            "items": {},
+            "type": "array",
+            "title": "Records"
+          },
+          "clinic_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Clinic Name",
+            "default": "Mehta Multi-Specialty Clinic"
+          },
+          "clinic_location": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Clinic Location",
+            "default": "Kanpur, Uttar Pradesh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "records"
+        ],
+        "title": "BillingLogRequest"
+      },
+      "ClinicDayListItem": {
+        "properties": {
+          "clinic_id": {
+            "type": "string",
+            "title": "Clinic Id"
+          },
+          "clinic_name": {
+            "type": "string",
+            "title": "Clinic Name"
+          },
+          "business_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Business Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "accepted_rows": {
+            "type": "integer",
+            "title": "Accepted Rows"
+          },
+          "rejected_rows": {
+            "type": "integer",
+            "title": "Rejected Rows"
+          },
+          "narrative_status": {
+            "type": "string",
+            "title": "Narrative Status"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clinic_id",
+          "clinic_name",
+          "business_date",
+          "status",
+          "accepted_rows",
+          "rejected_rows",
+          "narrative_status",
+          "updated_at"
+        ],
+        "title": "ClinicDayListItem"
+      },
+      "ClinicDayListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicDayListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ClinicDayListResponse"
+      },
+      "ClinicDayResponse": {
+        "properties": {
+          "clinic_id": {
+            "type": "string",
+            "title": "Clinic Id"
+          },
+          "clinic_name": {
+            "type": "string",
+            "title": "Clinic Name"
+          },
+          "clinic_location": {
+            "type": "string",
+            "title": "Clinic Location"
+          },
+          "business_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Business Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ingestion": {
+            "$ref": "#/components/schemas/IngestionSummary"
+          },
+          "report": {
+            "$ref": "#/components/schemas/DeterministicReport"
+          },
+          "source_hash": {
+            "type": "string",
+            "title": "Source Hash"
+          },
+          "report_hash": {
+            "type": "string",
+            "title": "Report Hash"
+          },
+          "narrative_status": {
+            "type": "string",
+            "title": "Narrative Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clinic_id",
+          "clinic_name",
+          "clinic_location",
+          "business_date",
+          "status",
+          "ingestion",
+          "report",
+          "source_hash",
+          "report_hash",
+          "narrative_status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClinicDayResponse"
+      },
+      "DataQualityWarning": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "DataQualityWarning"
+      },
+      "DeterministicReport": {
+        "properties": {
+          "reconciliation": {
+            "$ref": "#/components/schemas/ReconciliationReport"
+          },
+          "analytics": {
+            "$ref": "#/components/schemas/AnalyticsReport"
+          },
+          "data_quality_warnings": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityWarning"
+            },
+            "type": "array",
+            "title": "Data Quality Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reconciliation",
+          "analytics",
+          "data_quality_warnings"
+        ],
+        "title": "DeterministicReport"
+      },
+      "FigureTrace": {
+        "properties": {
+          "display_value": {
+            "type": "string",
+            "title": "Display Value"
+          },
+          "report_path": {
+            "type": "string",
+            "title": "Report Path"
+          },
+          "raw_value": {
+            "title": "Raw Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_value",
+          "report_path",
+          "raw_value"
+        ],
+        "title": "FigureTrace"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HourlyRevenue": {
+        "properties": {
+          "hour_utc": {
+            "type": "integer",
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Hour Utc"
+          },
+          "revenue_paise": {
+            "type": "integer",
+            "title": "Revenue Paise"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hour_utc",
+          "revenue_paise"
+        ],
+        "title": "HourlyRevenue"
+      },
+      "IngestionSummary": {
+        "properties": {
+          "received_rows": {
+            "type": "integer",
+            "title": "Received Rows"
+          },
+          "accepted_rows": {
+            "type": "integer",
+            "title": "Accepted Rows"
+          },
+          "rejected_rows": {
+            "type": "integer",
+            "title": "Rejected Rows"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "received_rows",
+          "accepted_rows",
+          "rejected_rows"
+        ],
+        "title": "IngestionSummary"
+      },
+      "MedicineQuantityRanking": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "drug_name": {
+            "type": "string",
+            "title": "Drug Name"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "drug_name",
+          "quantity"
+        ],
+        "title": "MedicineQuantityRanking"
+      },
+      "MedicineRevenueRanking": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "drug_name": {
+            "type": "string",
+            "title": "Drug Name"
+          },
+          "revenue_paise": {
+            "type": "integer",
+            "title": "Revenue Paise"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "drug_name",
+          "revenue_paise"
+        ],
+        "title": "MedicineRevenueRanking"
+      },
+      "NarrativeGenerateRequest": {
+        "properties": {
+          "force_regenerate": {
+            "type": "boolean",
+            "title": "Force Regenerate",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "NarrativeGenerateRequest"
+      },
+      "NarrativeResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "traces": {
+            "items": {
+              "$ref": "#/components/schemas/FigureTrace"
+            },
+            "type": "array",
+            "title": "Traces"
+          },
+          "unavailable_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableMetric"
+            },
+            "type": "array",
+            "title": "Unavailable Metrics"
+          },
+          "report_hash": {
+            "type": "string",
+            "title": "Report Hash"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "summary",
+          "traces",
+          "unavailable_metrics",
+          "report_hash"
+        ],
+        "title": "NarrativeResponse"
+      },
+      "PaymentModeMetrics": {
+        "properties": {
+          "billed_paise": {
+            "type": "integer",
+            "title": "Billed Paise",
+            "default": 0
+          },
+          "collected_paise": {
+            "type": "integer",
+            "title": "Collected Paise",
+            "default": 0
+          },
+          "outstanding_paise": {
+            "type": "integer",
+            "title": "Outstanding Paise",
+            "default": 0
+          },
+          "refunds_paise": {
+            "type": "integer",
+            "title": "Refunds Paise",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "PaymentModeMetrics"
+      },
+      "PeakHour": {
+        "properties": {
+          "start_hour_utc": {
+            "type": "integer",
+            "title": "Start Hour Utc"
+          },
+          "end_hour_utc": {
+            "type": "integer",
+            "title": "End Hour Utc"
+          },
+          "revenue_paise": {
+            "type": "integer",
+            "title": "Revenue Paise"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_hour_utc",
+          "end_hour_utc",
+          "revenue_paise"
+        ],
+        "title": "PeakHour"
+      },
+      "ReconciliationReport": {
+        "properties": {
+          "total_billed_paise": {
+            "type": "integer",
+            "title": "Total Billed Paise"
+          },
+          "total_collected_paise": {
+            "type": "integer",
+            "title": "Total Collected Paise"
+          },
+          "total_outstanding_paise": {
+            "type": "integer",
+            "title": "Total Outstanding Paise"
+          },
+          "total_refunds_paise": {
+            "type": "integer",
+            "title": "Total Refunds Paise"
+          },
+          "total_discount_paise": {
+            "type": "integer",
+            "title": "Total Discount Paise"
+          },
+          "collection_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Rate"
+          },
+          "pending_visit_count": {
+            "type": "integer",
+            "title": "Pending Visit Count"
+          },
+          "refund_visit_count": {
+            "type": "integer",
+            "title": "Refund Visit Count"
+          },
+          "by_payment_mode": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PaymentModeMetrics"
+            },
+            "type": "object",
+            "title": "By Payment Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_billed_paise",
+          "total_collected_paise",
+          "total_outstanding_paise",
+          "total_refunds_paise",
+          "total_discount_paise",
+          "collection_rate",
+          "pending_visit_count",
+          "refund_visit_count",
+          "by_payment_mode"
+        ],
+        "title": "ReconciliationReport"
+      },
+      "UnavailableMetric": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Metric"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metric",
+          "reason"
+        ],
+        "title": "UnavailableMetric"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

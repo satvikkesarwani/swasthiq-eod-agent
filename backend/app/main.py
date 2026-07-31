@@ -1,0 +1,186 @@
+import logging
+from contextlib import asynccontextmanager
+from uuid import uuid4
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api.routes_clinic_days import router as clinic_days_router
+from app.api.routes_health import router as health_router
+from app.api.routes_narratives import router as narratives_router
+from app.core.config import Settings, get_settings
+from app.core.errors import AppError
+from app.db.session import Base, build_engine, build_session_factory
+from app.integrations.llm_provider import DisabledNarrativeProvider, OpenAICompatibleNarrativeProvider
+
+logger = logging.getLogger(__name__)
+
+
+def _error_response(*, request: Request, code: str, message: str, status_code: int) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", None) or request.headers.get("X-Request-ID") or f"req_{uuid4().hex}"
+    return JSONResponse(
+        status_code=status_code,
+        headers={"X-Request-ID": request_id},
+        content={
+            "error": {
+                "code": code,
+                "message": message,
+                "details": [],
+                "request_id": request_id,
+            }
+        },
+    )
+
+
+def _build_provider(settings: Settings):
+    if settings.llm_provider == "openai_compatible" and settings.llm_api_key:
+        return OpenAICompatibleNarrativeProvider(
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url,
+            model=settings.llm_model,
+            timeout_seconds=settings.llm_timeout_seconds,
+        )
+    return DisabledNarrativeProvider()
+
+
+def create_app(*, settings: Settings | None = None, narrative_provider=None) -> FastAPI:
+    settings = settings or get_settings()
+    engine = build_engine(settings.database_url)
+    Base.metadata.create_all(engine)
+    session_factory = build_session_factory(engine)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        engine.dispose()
+
+    app = FastAPI(
+        lifespan=lifespan,
+        title=settings.app_name,
+        version=settings.app_version,
+        description="Deterministic clinic-day billing reconciliation, analytics, and grounded narrative API.",
+    )
+    app.state.settings = settings
+    app.state.engine = engine
+    app.state.session_factory = session_factory
+    app.state.narrative_provider = narrative_provider or _build_provider(settings)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Request-ID"],
+    )
+
+    @app.middleware("http")
+    async def request_body_limit_middleware(request: Request, call_next):
+        if request.method in {"POST", "PUT", "PATCH"}:
+            limit = settings.max_request_body_bytes
+            content_length = request.headers.get("content-length")
+            if content_length is not None:
+                try:
+                    if int(content_length) > limit:
+                        return _error_response(
+                            request=request,
+                            code="REQUEST_TOO_LARGE",
+                            message=f"Request body must be no larger than {limit} bytes.",
+                            status_code=413,
+                        )
+                except ValueError:
+                    pass
+
+            body = bytearray()
+            async for chunk in request.stream():
+                body.extend(chunk)
+                if len(body) > limit:
+                    return _error_response(
+                        request=request,
+                        code="REQUEST_TOO_LARGE",
+                        message=f"Request body must be no larger than {limit} bytes.",
+                        status_code=413,
+                    )
+
+            payload = bytes(body)
+            request._body = payload
+            sent = False
+
+            async def receive():
+                nonlocal sent
+                if sent:
+                    return {"type": "http.request", "body": b"", "more_body": False}
+                sent = True
+                return {"type": "http.request", "body": payload, "more_body": False}
+
+            request._receive = receive
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or f"req_{uuid4().hex}"
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": {
+                    "code": exc.code,
+                    "message": exc.message,
+                    "details": exc.details,
+                    "request_id": getattr(request.state, "request_id", None),
+                }
+            },
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_handler(request: Request, exc: RequestValidationError):
+        details = [
+            {
+                "field": ".".join(str(part) for part in error["loc"]),
+                "code": error["type"],
+                "message": error["msg"],
+            }
+            for error in exc.errors()
+        ]
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "REQUEST_VALIDATION_FAILED",
+                    "message": "The request does not match the API contract.",
+                    "details": details,
+                    "request_id": getattr(request.state, "request_id", None),
+                }
+            },
+        )
+
+    @app.exception_handler(Exception)
+    async def unexpected_error_handler(request: Request, exc: Exception):
+        logger.exception("Unhandled API error", exc_info=exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "An unexpected error occurred.",
+                    "details": [],
+                    "request_id": getattr(request.state, "request_id", None),
+                }
+            },
+        )
+
+    api_prefix = "/api/v1"
+    app.include_router(health_router, prefix=api_prefix)
+    app.include_router(clinic_days_router, prefix=api_prefix)
+    app.include_router(narratives_router, prefix=api_prefix)
+    return app
+
+
+app = create_app()

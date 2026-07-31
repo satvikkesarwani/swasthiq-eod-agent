@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Confidential evaluation materials
+SwasthiQ-Hiring-Assignment-July.pdf
+billing_log_2026-07-25.json
+billing_log_2026-07-26.json
+billing_log_2026-07-27.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "NO_VALID_ROWS",
+    "message": "The billing log contains no valid rows; the existing clinic-day was not changed.",
+    "details": [
+      {
+        "row_index": 0,
+        "visit_id": "V-DEMO-001",
+        "field": "payment_mode",
+        "code": "FIELD_REQUIRED",
+        "message": "Field required"
+      }
+    ],
+    "request_id": "req_demo"
+  }
+}
