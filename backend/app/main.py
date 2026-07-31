@@ -13,7 +13,7 @@ from app.api.routes_narratives import router as narratives_router
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Base, build_engine, build_session_factory
-from app.integrations.llm_provider import DisabledNarrativeProvider, OpenAICompatibleNarrativeProvider
+from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledNarrativeProvider
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +35,15 @@ def _error_response(*, request: Request, code: str, message: str, status_code: i
 
 
 def _build_provider(settings: Settings):
-    if settings.llm_provider == "openai_compatible" and settings.llm_api_key:
-        return OpenAICompatibleNarrativeProvider(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
-            model=settings.llm_model,
+    if settings.llm_enabled and settings.llm_provider == "nvidia":
+        return ChatNVIDIANarrativeProvider(
+            api_key=settings.nvidia_api_key,
+            model=settings.nvidia_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
             timeout_seconds=settings.llm_timeout_seconds,
+            transport_retries=settings.llm_transport_retries,
+            base_url=settings.nvidia_base_url,
         )
     return DisabledNarrativeProvider()
 

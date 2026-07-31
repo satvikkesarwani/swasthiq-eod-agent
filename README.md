@@ -8,8 +8,9 @@ Implementation workspace for a Python REST API and React interface that converts
 - Step 2: Architecture, API contract, data model, and user flows complete.
 - Step 3: Deterministic backend stabilized for Prompt 1.
 - Prompt 2: Persistence, Alembic migrations, hashing/versioning, REST contract, and OpenAPI artifact finalized.
+- Prompt 3: LangChain + NVIDIA `ChatNVIDIA` narrative provider integrated behind deterministic grounding and safe fallback.
 - Pre-coding package for Steps 4–7: complete.
-- Remaining coding: LangChain + NVIDIA integration, React interface, CI, deployment, and production hardening outside Prompt 1 scope.
+- Remaining coding: React interface, CI, deployment, and production hardening outside Prompt 1 scope.
 
 ## Locked stack
 
@@ -25,8 +26,19 @@ The deterministic backend uses integer paise for all money calculations and does
 - `MAX_RECORDS_PER_REQUEST=10000`
 - `MAX_REQUEST_BODY_BYTES=5242880`
 - `STORE_REJECTED_RAW_ROWS=false`
+- `LLM_ENABLED=true`
+- `LLM_PROVIDER=nvidia`
+- `NVIDIA_API_KEY=`
+- `NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b`
+- `NVIDIA_BASE_URL=`
+- `LLM_TIMEOUT_SECONDS=25`
+- `LLM_MAX_TOKENS=700`
+- `LLM_TEMPERATURE=0`
+- `LLM_TRANSPORT_RETRIES=1`
 
 Rejected-row API responses expose only safe, actionable issue fields. Complete malformed source rows are not persisted unless `STORE_REJECTED_RAW_ROWS=true` is explicitly enabled for local development/testing.
+
+Missing NVIDIA credentials do not block app startup. Narrative generation falls back to deterministic, trace-validated text until credentials are configured.
 
 ## Backend verification
 
@@ -34,6 +46,7 @@ From `backend/`, run:
 
 ```bash
 python3 -m pytest -q
+python3 -m pytest -m "not live_nvidia" -q
 python3 -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
 python3 -c "from app.main import create_app; create_app()"
 ```
@@ -43,6 +56,8 @@ On this machine, `python` is not available on `PATH`; use `python3`.
 Prompt 1 stabilization details are recorded in [`docs/implementation/01_BACKEND_STABILIZATION_REPORT.md`](docs/implementation/01_BACKEND_STABILIZATION_REPORT.md).
 
 Prompt 2 persistence and API contract details are recorded in [`docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md`](docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md).
+
+Prompt 3 LangChain + NVIDIA provider details are recorded in [`docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md`](docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md).
 
 ## Database and Migrations
 

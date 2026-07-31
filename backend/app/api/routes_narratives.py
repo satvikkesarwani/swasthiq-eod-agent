@@ -20,14 +20,14 @@ ERROR_RESPONSES = {
 
 
 @router.post("/{clinic_id}/{business_date}/narrative", response_model=NarrativeResponse, responses=ERROR_RESPONSES)
-def generate_narrative(
+async def generate_narrative(
     clinic_id: str,
     business_date: date,
     payload: NarrativeGenerateRequest,
     session: Session = Depends(get_db),
     provider: NarrativeProvider = Depends(get_narrative_provider),
 ) -> NarrativeResponse:
-    return NarrativeService(session, provider).generate(
+    return await NarrativeService(session, provider).generate(
         clinic_id=clinic_id,
         business_date=business_date,
         force_regenerate=payload.force_regenerate,

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,11 +17,15 @@ class Settings(BaseSettings):
     max_request_body_bytes: int = Field(default=5_242_880, ge=1)
     store_rejected_raw_rows: bool = False
 
-    llm_provider: Literal["disabled", "openai_compatible"] = "disabled"
-    llm_api_key: str | None = None
-    llm_base_url: str = "https://api.openai.com/v1"
-    llm_model: str = "gpt-5-mini"
-    llm_timeout_seconds: float = Field(default=20.0, ge=1, le=120)
+    llm_enabled: bool = True
+    llm_provider: Literal["disabled", "nvidia"] = "nvidia"
+    nvidia_api_key: SecretStr | None = None
+    nvidia_model: str = "nvidia/nemotron-3-nano-30b-a3b"
+    nvidia_base_url: str | None = None
+    llm_timeout_seconds: float = Field(default=25.0, gt=0, le=120)
+    llm_max_tokens: int = Field(default=700, ge=1, le=4_000)
+    llm_temperature: float = Field(default=0.0, ge=0.0, le=1.0)
+    llm_transport_retries: int = Field(default=1, ge=0, le=3)
 
     @field_validator("cors_origins", mode="before")
     @classmethod

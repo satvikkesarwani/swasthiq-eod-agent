@@ -1,8 +1,9 @@
-import json
 from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.agent.context import build_narrative_generation_input
+from app.agent.exceptions import NarrativeProviderError
 from app.core.errors import AppError
 from app.integrations.llm_provider import NarrativeProvider
 from app.repositories.clinic_day_repository import ClinicDayRepository
@@ -169,24 +170,7 @@ class NarrativeService:
                 )
             )
 
-    def _provider_prompt(self, clinic_day: Any, catalogue: dict[str, Any]) -> str:
-        safe_report = {
-            "clinic_name": clinic_day.clinic_name,
-            "business_date": clinic_day.business_date.isoformat(),
-            "report": clinic_day.report_json,
-            "available_trace_placeholders": {
-                key: value.display_value for key, value in catalogue.items()
-            },
-        }
-        return (
-            "Create a short WhatsApp-appropriate owner-facing EOD summary. "
-            "Use text_template placeholders exactly as listed. Every figure, medicine name, date, count, "
-            "percentage, time, and money value must be a placeholder; do not type any literal digits. "
-            "Do not claim profit because cost-price data is absent. Return only the required JSON schema.\n\n"
-            + json.dumps(safe_report, ensure_ascii=False, sort_keys=True)
-        )
-
-    def generate(self, *, clinic_id: str, business_date, force_regenerate: bool = False) -> NarrativeResponse:
+    async def generate(self, *, clinic_id: str, business_date, force_regenerate: bool = False) -> NarrativeResponse:
         clinic_day = self.clinic_days.get(clinic_id, business_date, with_children=True)
         if clinic_day is None:
             raise AppError(code="CLINIC_DAY_NOT_FOUND", message="Clinic-day report was not found.", status_code=404)
@@ -206,32 +190,51 @@ class NarrativeService:
             )
 
         catalogue = build_trace_catalogue(clinic_day=clinic_day)
-        candidate = None
+        generation_input = build_narrative_generation_input(clinic_day=clinic_day, catalogue=catalogue)
+        candidate: NarrativeCandidate
         status = "generated"
         provider_name: str | None = self.provider.name
         model_name: str | None = self.provider.model
-        last_error: Exception | None = None
+        generation_ms: int | None = None
+        fallback_reason_code: str | None = None
 
-        prompt = self._provider_prompt(clinic_day, catalogue)
-        for attempt in range(2):
-            try:
-                candidate = self.provider.generate(
-                    prompt=prompt,
-                    repair_context=str(last_error) if attempt and last_error else None,
-                )
-                self._ensure_unavailable_profit(candidate)
-                summary, traces = validate_and_render_candidate(candidate, catalogue)
-                self._validate_complete_summary(clinic_day, traces)
-                break
-            except Exception as exc:
-                last_error = exc
-        else:
+        try:
+            provider_result = await self.provider.generate_draft(generation_input)
+            candidate = NarrativeCandidate.model_validate(provider_result.candidate.model_dump())
+            provider_name = provider_result.provider
+            model_name = provider_result.model
+            generation_ms = provider_result.generation_ms
+            self._ensure_unavailable_profit(candidate)
+            summary, traces = validate_and_render_candidate(candidate, catalogue)
+            self._validate_complete_summary(clinic_day, traces)
+        except NarrativeProviderError as exc:
             candidate = self._fallback_candidate(clinic_day)
             summary, traces = validate_and_render_candidate(candidate, catalogue)
             self._validate_complete_summary(clinic_day, traces)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
             model_name = self.provider.model
+            fallback_reason_code = exc.code
+        except Exception:
+            candidate = self._fallback_candidate(clinic_day)
+            summary, traces = validate_and_render_candidate(candidate, catalogue)
+            self._validate_complete_summary(clinic_day, traces)
+            status = "fallback"
+            provider_name = self.provider.name if self.provider.name != "disabled" else None
+            model_name = self.provider.model
+            fallback_reason_code = "MODEL_GROUNDING_INVALID"
+
+        self.session.expire_all()
+        current_clinic_day = self.clinic_days.get(clinic_id, business_date, with_children=True)
+        if current_clinic_day is None:
+            raise AppError(code="CLINIC_DAY_NOT_FOUND", message="Clinic-day report was not found.", status_code=404)
+        if current_clinic_day.report_hash != generation_input.report_hash:
+            raise AppError(
+                code="NARRATIVE_REPORT_CHANGED",
+                message="Clinic-day report changed while the narrative was being generated. Please retry.",
+                status_code=409,
+            )
+        clinic_day = current_clinic_day
 
         unavailable = [item.model_dump() for item in candidate.unavailable_metrics]
         trace_payload = [trace.model_dump(mode="json") for trace in traces]
@@ -245,8 +248,8 @@ class NarrativeService:
                 unavailable_metrics=unavailable,
                 provider=provider_name,
                 model=model_name,
-                generation_ms=None,
-                fallback_reason_code="PROVIDER_UNAVAILABLE" if status == "fallback" else None,
+                generation_ms=generation_ms,
+                fallback_reason_code=fallback_reason_code,
             )
             self.session.commit()
         except Exception:
@@ -261,8 +264,8 @@ class NarrativeService:
             report_hash=clinic_day.report_hash,
             provider=provider_name,
             model=model_name,
-            generation_ms=None,
-            fallback_reason_code="PROVIDER_UNAVAILABLE" if status == "fallback" else None,
+            generation_ms=generation_ms,
+            fallback_reason_code=fallback_reason_code,
         )
 
     def get(self, *, clinic_id: str, business_date) -> NarrativeResponse:

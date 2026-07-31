@@ -3,14 +3,14 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError, SecretStr
 
+from app.agent.exceptions import NarrativeProviderDisabled
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.core.money import format_paise, format_rate
-from app.integrations import llm_provider
-from app.integrations.llm_provider import DisabledNarrativeProvider, OpenAICompatibleNarrativeProvider
+from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledNarrativeProvider
 from app.main import create_app
-from app.schemas.narrative import NarrativeCandidate
 
 
 def test_settings_parse_cors_origins_from_comma_string():
@@ -18,67 +18,65 @@ def test_settings_parse_cors_origins_from_comma_string():
     assert settings.cors_origins == ["http://one.test", "http://two.test"]
 
 
-def test_app_builds_openai_compatible_provider_when_configured():
+def test_app_builds_nvidia_provider_when_configured():
     app = create_app(
         settings=Settings(
             app_env="test",
             database_url="sqlite://",
             cors_origins=["http://test"],
-            llm_provider="openai_compatible",
-            llm_api_key="test-key",
-            llm_model="test-model",
+            llm_provider="nvidia",
+            nvidia_api_key="test-key",
+            nvidia_model="test-model",
+            nvidia_base_url="https://integrate.api.nvidia.com/v1",
         )
     )
-    assert app.state.narrative_provider.name == "openai_compatible"
+    assert app.state.narrative_provider.name == "nvidia"
     assert app.state.narrative_provider.model == "test-model"
+    assert app.state.narrative_provider.base_url == "https://integrate.api.nvidia.com/v1"
     app.state.engine.dispose()
 
 
 def test_disabled_provider_and_app_error_string_are_safe():
     provider = DisabledNarrativeProvider()
-    with pytest.raises(RuntimeError, match="No LLM provider"):
-        provider.generate(prompt="safe aggregate prompt")
+    with pytest.raises(NarrativeProviderDisabled):
+        asyncio.run(provider.generate_draft(None))
 
     error = AppError(code="X", message="Safe message")
     assert str(error) == "Safe message"
 
 
-def test_openai_compatible_provider_parses_json_schema_response(monkeypatch):
-    candidate = {
-        "sections": [
-            {
-                "text_template": "Collected {{reconciliation.total_collected_paise}}.",
-                "trace_keys": ["reconciliation.total_collected_paise"],
-            }
-        ],
-        "unavailable_metrics": [],
-    }
+def test_llm_settings_are_bounded_and_secret_is_masked():
+    settings = Settings(nvidia_api_key="secret-value")
+    assert isinstance(settings.nvidia_api_key, SecretStr)
+    assert settings.nvidia_api_key.get_secret_value() == "secret-value"
+    assert "secret-value" not in repr(settings)
 
-    class FakeResponse:
-        def raise_for_status(self):
-            return None
+    with pytest.raises(ValidationError):
+        Settings(llm_temperature=1.5)
+    with pytest.raises(ValidationError):
+        Settings(llm_max_tokens=0)
+    with pytest.raises(ValidationError):
+        Settings(llm_timeout_seconds=0)
 
-        def json(self):
-            return {"choices": [{"message": {"content": json.dumps(candidate)}}]}
 
-    def fake_post(url, *, headers, json, timeout):
-        assert url == "https://example.test/chat/completions"
-        assert headers["Authorization"] == "Bearer secret"
-        assert json["messages"][-1]["content"].endswith("fix it")
-        assert timeout == 3
-        return FakeResponse()
+def test_chat_nvidia_provider_does_not_initialize_model_until_generation():
+    calls = []
 
-    monkeypatch.setattr(llm_provider.httpx, "post", fake_post)
-    provider = OpenAICompatibleNarrativeProvider(
-        api_key="secret",
-        base_url="https://example.test/",
+    def factory(**kwargs):
+        calls.append(kwargs)
+        raise AssertionError("factory should not be called during construction")
+
+    provider = ChatNVIDIANarrativeProvider(
+        api_key=SecretStr("secret"),
         model="model",
-        timeout_seconds=3,
+        temperature=0,
+        max_tokens=700,
+        timeout_seconds=25,
+        transport_retries=1,
+        chat_model_factory=factory,
     )
-
-    parsed = provider.generate(prompt="prompt", repair_context="fix it")
-    assert isinstance(parsed, NarrativeCandidate)
-    assert parsed.sections[0].trace_keys == ["reconciliation.total_collected_paise"]
+    assert provider.name == "nvidia"
+    assert calls == []
 
 
 def test_health_and_not_found_error_paths(client):
