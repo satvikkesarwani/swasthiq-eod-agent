@@ -1,0 +1,43 @@
+[
+  {
+    "clinic_id": "DEMO-NORMAL-001",
+    "visit_id": "N-001",
+    "timestamp": "2026-08-01T09:15:00Z",
+    "doctor_id": "DR-A",
+    "line_items": [
+      { "drug_name": "ORS Sachet", "qty": 4, "unit_price_paise": 2500 },
+      { "drug_name": "Paracetamol 500", "qty": 10, "unit_price_paise": 350 }
+    ],
+    "payment_mode": "cash",
+    "amount_paid_paise": 13000,
+    "discount_paise": 500,
+    "is_refund": false
+  },
+  {
+    "clinic_id": "DEMO-NORMAL-001",
+    "visit_id": "N-002",
+    "timestamp": "2026-08-01T13:20:00Z",
+    "doctor_id": "DR-B",
+    "line_items": [
+      { "drug_name": "Amoxicillin", "qty": 6, "unit_price_paise": 1200 },
+      { "drug_name": "Omeprazole", "qty": 8, "unit_price_paise": 900 }
+    ],
+    "payment_mode": "upi",
+    "amount_paid_paise": 14000,
+    "discount_paise": 400,
+    "is_refund": false
+  },
+  {
+    "clinic_id": "DEMO-NORMAL-001",
+    "visit_id": "N-003",
+    "timestamp": "2026-08-01T16:45:00Z",
+    "doctor_id": "DR-A",
+    "line_items": [
+      { "drug_name": "Atorvastatin", "qty": 5, "unit_price_paise": 2400 }
+    ],
+    "payment_mode": "card",
+    "amount_paid_paise": 10000,
+    "discount_paise": 0,
+    "is_refund": false
+  }
+]

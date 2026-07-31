@@ -6,6 +6,7 @@ import { AppProviders } from "../app/AppProviders";
 import { RouteErrorBoundary } from "../app/RouteErrorBoundary";
 import { AppShell } from "../components/layout/AppShell";
 import { analyticsLoader } from "../features/analytics/loader";
+import { narrativeLoader } from "../features/narrative/loader";
 import { reconciliationLoader } from "../features/reconciliation/loader";
 import { reportsLoader } from "../features/reports/loader";
 import { AnalyticsPage } from "../pages/AnalyticsPage";
@@ -27,7 +28,7 @@ export function appRoutes(): RouteObject[] {
             { path: "reports", Component: ReportsHomePage, loader: reportsLoader },
             { path: "reports/:clinicId/:businessDate/reconciliation", Component: ReconciliationPage, loader: reconciliationLoader },
             { path: "reports/:clinicId/:businessDate/analytics", Component: AnalyticsPage, loader: analyticsLoader },
-            { path: "reports/:clinicId/:businessDate/narrative", Component: NarrativePage },
+            { path: "reports/:clinicId/:businessDate/narrative", Component: NarrativePage, loader: narrativeLoader },
             { path: "*", Component: NotFoundPage },
           ],
         },

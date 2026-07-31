@@ -1,184 +1,81 @@
 # SwasthiQ EOD Billing & Analytics Agent
 
-Implementation workspace for a Python REST API and React interface that converts a clinic-day billing log into deterministic reconciliation, analytics, and a figure-traced owner-facing narrative.
+A full-stack clinic-day billing workflow for importing a raw JSON billing log and producing deterministic reconciliation, deterministic analytics, and a grounded owner-facing narrative with traced figures.
 
-## Current status
+## Product Overview
 
-- Step 1: Requirements specification complete.
-- Step 2: Architecture, API contract, data model, and user flows complete.
-- Step 3: Deterministic backend stabilized for Prompt 1.
-- Prompt 2: Persistence, Alembic migrations, hashing/versioning, REST contract, and OpenAPI artifact finalized.
-- Prompt 3: LangChain + NVIDIA `ChatNVIDIA` narrative provider integrated behind deterministic grounding and safe fallback.
-- Prompt 4: Complete grounded narrative pipeline, intent policy, semantic repair, and deterministic fallback finalized.
-- Prompt 5: React frontend foundation, typed OpenAPI client, design system, app shell, and placeholder routes finalized.
-- Prompt 6: Billing-log import, validation issues, recent reports, filters, pagination, and report-opening workflow finalized.
-- Pre-coding package for Steps 4–7: complete.
-- Prompt 7: Production EOD Reconciliation Dashboard finalized with backend-authoritative KPI cards, payment-mode breakdown, collection health, issue access, empty/refund states, and safe error handling.
-- Prompt 8: Production Analytics Dashboard finalized with backend-authoritative revenue-by-hour chart, peak hour, medicine rankings, warning states, and safe error handling.
-- Remaining coding: AI narrative screen, CI, deployment, and production hardening outside Prompt 8 scope.
+SwasthiQ EOD helps a clinic owner answer the end-of-day questions quickly:
 
-## Locked stack
+- how much was billed, collected, outstanding, and refunded;
+- which hour produced the most billed sales;
+- which medicines ranked highest by quantity and revenue;
+- what plain-language summary can be shared with an owner.
 
-- Backend: Python, FastAPI, Pydantic v2, SQLAlchemy 2, SQLite.
-- Agentic layer: LangChain, `langchain-nvidia-ai-endpoints`, `ChatNVIDIA`, NVIDIA Nemotron.
-- Frontend: React, Vite, TypeScript, React Router, Recharts.
-- Deployment plan: Vercel frontend and Railway backend with a persistent volume for SQLite.
+The deterministic backend owns every number. The LLM layer may only explain approved report facts and every narrative figure is returned with a backend trace.
 
-## Backend configuration
+## Key Features
 
-The deterministic backend uses integer paise for all money calculations and does not call an LLM. Important local settings are documented in [`backend/.env.example`](backend/.env.example):
+- Billing JSON import with safe frontend file checks and backend row validation.
+- Atomic clinic-day create/replace with SQLite persistence and Alembic migrations.
+- Reconciliation dashboard with payment-mode splits.
+- Analytics dashboard with hourly revenue chart, backend peak hour, and separate medicine rankings.
+- AI Narrative Summary page with explicit generate/regenerate actions.
+- Traced Figures panel mapping summary values back to deterministic report paths.
+- Deterministic fallback when NVIDIA is disabled, unavailable, or unsafe.
+- Empty-day, refund-only, and partial-import handling.
+- Production-safe request logging, security headers, CORS, and local rate limiting for narrative generation.
+- Railway backend and Vercel frontend deployment configuration.
 
-- `MAX_RECORDS_PER_REQUEST=10000`
-- `MAX_REQUEST_BODY_BYTES=5242880`
-- `STORE_REJECTED_RAW_ROWS=false`
-- `LLM_ENABLED=true`
-- `LLM_PROVIDER=nvidia`
-- `NVIDIA_API_KEY=`
-- `NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b`
-- `NVIDIA_BASE_URL=`
-- `LLM_TIMEOUT_SECONDS=25`
-- `LLM_MAX_TOKENS=700`
-- `LLM_TEMPERATURE=0`
-- `LLM_TRANSPORT_RETRIES=1`
+## Screens
 
-Rejected-row API responses expose only safe, actionable issue fields. Complete malformed source rows are not persisted unless `STORE_REJECTED_RAW_ROWS=true` is explicitly enabled for local development/testing.
+- `/reports` - import billing logs and open recent reports.
+- `/reports/:clinicId/:businessDate/reconciliation` - deterministic EOD reconciliation.
+- `/reports/:clinicId/:businessDate/analytics` - deterministic analytics.
+- `/reports/:clinicId/:businessDate/narrative` - grounded AI/fallback owner summary and traces.
 
-Missing NVIDIA credentials do not block app startup. Narrative generation falls back to deterministic, trace-validated text until credentials are configured.
-
-## Backend verification
-
-From `backend/`, run:
-
-```bash
-python3 -m pytest -q
-python3 -m pytest -m "not live_nvidia" -q
-python3 -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
-python3 -c "from app.main import create_app; create_app()"
-```
-
-On this machine, `python` is not available on `PATH`; use `python3`.
-
-Prompt 1 stabilization details are recorded in [`docs/implementation/01_BACKEND_STABILIZATION_REPORT.md`](docs/implementation/01_BACKEND_STABILIZATION_REPORT.md).
-
-Prompt 2 persistence and API contract details are recorded in [`docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md`](docs/implementation/02_PERSISTENCE_AND_API_CONTRACT_REPORT.md).
-
-Prompt 3 LangChain + NVIDIA provider details are recorded in [`docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md`](docs/implementation/03_LANGCHAIN_NVIDIA_INTEGRATION_REPORT.md).
-
-Prompt 4 grounded narrative pipeline details are recorded in [`docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md`](docs/implementation/04_GROUNDED_NARRATIVE_PIPELINE_REPORT.md).
-
-Prompt 5 frontend foundation details are recorded in [`docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md`](docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md).
-
-Prompt 6 import and recent-report workflow details are recorded in [`docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md`](docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md).
-
-Prompt 7 reconciliation dashboard details are recorded in [`docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md`](docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md).
-
-Prompt 8 analytics dashboard details are recorded in [`docs/implementation/08_ANALYTICS_DASHBOARD_REPORT.md`](docs/implementation/08_ANALYTICS_DASHBOARD_REPORT.md).
-
-## Frontend verification
-
-From `frontend/`, run:
-
-```bash
-npm install
-npm run generate:api
-npm run typecheck
-npm run lint
-npm run test:run
-npm run test:coverage
-npm run build
-```
-
-The frontend defaults to same-origin `/api/v1`. Set `VITE_DEV_PROXY_TARGET` for the local backend proxy and `VITE_API_BASE_URL` only when using a separate backend origin.
-
-## Import workflow
-
-The Reports page accepts one `.json` billing log at a time. The browser only checks file extension, size, readability, valid JSON, and that the root value is an array. The frontend file limit is `4.75 MiB`, chosen below the backend `5 MiB` request limit so added clinic metadata is less likely to exceed the service boundary. Empty arrays are valid empty clinic days.
-
-All row validation, financial calculations, accepted/rejected decisions, report generation, and validation issue messages remain backend-authoritative. Partial imports show accepted/rejected counts and safe issue details without raw rejected rows.
+## Architecture
 
 ```mermaid
-flowchart TD
-    A["Open /reports"] --> B["Filter or review recent reports"]
-    A --> C["Enter clinic and business date"]
-    C --> D["Choose or drop one JSON file"]
-    D --> E["Browser checks file and JSON array shape"]
-    E --> F["PUT exact records to /api/v1/clinic-days/{clinic_id}/{business_date}"]
-    F --> G{"Rejected rows?"}
-    G -->|"0"| H["Refresh recent reports and open reconciliation"]
-    G -->|"> 0"| I["Show partial result and validation issues drawer"]
-    B --> J["Open stored report"]
-    I --> H
+flowchart LR
+    Browser["React app"] --> API["FastAPI REST API"]
+    API --> DB["SQLite"]
+    API --> Report["Deterministic report services"]
+    API --> Narrative["Grounded narrative service"]
+    Narrative --> NVIDIA["ChatNVIDIA optional"]
+    Narrative --> Fallback["Deterministic fallback"]
 ```
 
-## Reconciliation dashboard
+More detail: `docs/architecture/FINAL_ARCHITECTURE.md`.
 
-The reconciliation route loads the canonical clinic-day detail response from:
+## Tech Stack
+
+- Backend: Python, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, SQLite.
+- Agentic layer: LangChain, `langchain-nvidia-ai-endpoints`, `ChatNVIDIA`.
+- Frontend: React, Vite, TypeScript, React Router, Recharts, CSS modules.
+- Deployment: Railway backend, Vercel frontend.
+
+## Repository Structure
 
 ```text
-GET /api/v1/clinic-days/{clinic_id}/{business_date}
+backend/       Python REST API, migrations, Dockerfile, startup script
+frontend/      React application
+docs/          architecture, API, operations and submission docs
+demo-data/     independent synthetic demo fixtures
 ```
 
-React displays backend values only. It formats integer paise as rupees, formats the backend-supplied collection rate, orders existing payment-mode rows for readability, and selects neutral visual status labels. It does not recalculate outstanding, collection rate, totals, payment-mode totals, discounts, visit counts, or rejected-row counts.
+## Data Model
 
-```mermaid
-flowchart TD
-    A["Open reconciliation deep link"] --> B["React Router loader"]
-    B --> C["GET canonical clinic-day detail"]
-    C --> D["Header and report context"]
-    C --> E["Four financial cards"]
-    C --> F["Payment-mode breakdown"]
-    C --> G["Collection health"]
-    C --> H["Data-quality and integrity panels"]
-    H --> I["Validation issues drawer on demand"]
-```
+SQLite stores:
 
-The page handles normal sales days, outstanding balances, partial imports, valid empty days, refund-only days, sales-and-refunds days, backend warnings, 404 report-not-found responses, and safe retryable API failures.
+- `clinic_days`
+- `visits`
+- `line_items`
+- `ingestion_errors`
+- `narratives`
 
-## Analytics dashboard
+Replacing a clinic-day is transactional. Valid replacements swap report children and invalidate stale narratives only when the deterministic report hash changes.
 
-The analytics route loads the same canonical clinic-day detail response from:
-
-```text
-GET /api/v1/clinic-days/{clinic_id}/{business_date}
-```
-
-React displays backend analytics values only. It maps hourly buckets into a Recharts bar chart and semantic table without filtering, aggregating, filling, or reordering them. Peak hour highlighting comes only from backend `peak_hour`, and medicine ranking rows use backend `rank` and response order.
-
-```mermaid
-flowchart TD
-    A["Open analytics deep link"] --> B["React Router loader"]
-    B --> C["GET canonical clinic-day detail"]
-    C --> D["Header and report context"]
-    C --> E["Backend peak hour"]
-    C --> F["Revenue-by-hour chart and table"]
-    C --> G["Medicine rankings"]
-    C --> H["Warnings and report integrity"]
-    H --> I["Validation issues drawer on demand"]
-```
-
-The page handles normal sales days, partial imports, valid empty days, refund-only days, sales-and-refunds days, backend warnings, 404 report-not-found responses, malformed analytics responses, and safe retryable API failures.
-
-## Database and Migrations
-
-SQLite is the persistence engine. The app uses Alembic for local/production schema creation and upgrades; normal app startup no longer silently creates tables outside the test environment.
-
-From `backend/`, initialize or upgrade a configured database:
-
-```bash
-DATABASE_URL=sqlite:///./swasthiq_eod.db python3 -m alembic upgrade head
-```
-
-Migration verification used for Prompt 2:
-
-```bash
-DATABASE_URL=sqlite:////tmp/swasthiq_prompt2_migration_gate.db python3 -m alembic upgrade head
-DATABASE_URL=sqlite:////tmp/swasthiq_prompt2_migration_gate.db python3 -m alembic downgrade base
-DATABASE_URL=sqlite:////tmp/swasthiq_prompt2_migration_gate.db python3 -m alembic upgrade head
-```
-
-The final schema contains `clinic_days`, `visits`, `line_items`, `ingestion_errors`, and `narratives`. Foreign keys are enabled for SQLite connections. Replacing a clinic-day is a single transaction: valid replacements swap child visits, line items, and safe validation issues together; all-invalid non-empty replacements leave existing data and narratives untouched.
-
-## REST Contract
+## API Overview
 
 Base path: `/api/v1`.
 
@@ -190,37 +87,189 @@ Base path: `/api/v1`.
 - `GET /clinic-days/{clinic_id}/{business_date}/narrative`
 - `POST /clinic-days/{clinic_id}/{business_date}/narrative`
 
-`PUT` returns HTTP 200 for created, replaced, and unchanged idempotent writes, with `operation` set to `created`, `replaced`, or `unchanged`.
+Generated OpenAPI: `docs/contracts/openapi.json`. Guide: `docs/api/API_GUIDE.md`.
 
-Generated OpenAPI: [`docs/contracts/openapi.json`](docs/contracts/openapi.json).
+## Financial Definitions
 
-## Core design documents
+All money is integer paise in the backend.
 
-- [`docs/STEP_1_REQUIREMENTS.md`](docs/STEP_1_REQUIREMENTS.md)
-- [`docs/STEP_2_SYSTEM_DESIGN.md`](docs/STEP_2_SYSTEM_DESIGN.md)
-- [`docs/STEP_4_5_FORWARD_PLAN.md`](docs/STEP_4_5_FORWARD_PLAN.md)
+- Gross line total: `sum(qty * unit_price_paise)`.
+- Billed: gross total minus discount for non-refund rows.
+- Collected: `amount_paid_paise` for non-refund rows.
+- Outstanding: billed minus collected.
+- Refunds: absolute value of negative refund payments.
+- Payment-mode splits are computed by the backend.
 
-## Complete pre-coding package
+The deterministic layer never calls an LLM.
 
-Start here:
+## Analytics Definitions
 
-- [`docs/pre-coding/00_MASTER_READINESS.md`](docs/pre-coding/00_MASTER_READINESS.md)
+- Revenue by hour uses accepted non-refund sales and UTC timestamps.
+- Peak hour is selected by the backend.
+- Top medicines by quantity and by revenue are separate rankings.
+- Refund rows do not create sales analytics.
 
-Detailed specifications:
+## Grounded Narrative Design
 
-- [`01_STEP_3_BASELINE_AUDIT.md`](docs/pre-coding/01_STEP_3_BASELINE_AUDIT.md)
-- [`02_AGENTIC_LANGCHAIN_NVIDIA_SPEC.md`](docs/pre-coding/02_AGENTIC_LANGCHAIN_NVIDIA_SPEC.md)
-- [`03_FRONTEND_UI_UX_SPEC.md`](docs/pre-coding/03_FRONTEND_UI_UX_SPEC.md)
-- [`04_API_AND_DATA_CONTRACTS.md`](docs/pre-coding/04_API_AND_DATA_CONTRACTS.md)
-- [`05_QA_SECURITY_OBSERVABILITY_PLAN.md`](docs/pre-coding/05_QA_SECURITY_OBSERVABILITY_PLAN.md)
-- [`06_DEPLOYMENT_RELEASE_SUBMISSION_PLAN.md`](docs/pre-coding/06_DEPLOYMENT_RELEASE_SUBMISSION_PLAN.md)
-- [`07_REQUIREMENTS_TRACEABILITY_MATRIX.md`](docs/pre-coding/07_REQUIREMENTS_TRACEABILITY_MATRIX.md)
-- [`08_IMPLEMENTATION_BACKLOG.md`](docs/pre-coding/08_IMPLEMENTATION_BACKLOG.md)
-- [`09_RISK_REGISTER.md`](docs/pre-coding/09_RISK_REGISTER.md)
-- [`10_UI_COPY_DECK.md`](docs/pre-coding/10_UI_COPY_DECK.md)
-- [`11_DEFINITION_OF_DONE.md`](docs/pre-coding/11_DEFINITION_OF_DONE.md)
-- [`contracts/`](docs/pre-coding/contracts/) — current OpenAPI baseline and synthetic response examples.
+The narrative service builds an approved fact catalogue from the deterministic report. The model receives only safe context and approved placeholders. The backend validates:
 
-## Repository policy
+- structured output shape;
+- allowed fact usage by intent;
+- required facts by day type;
+- no invented literal numbers;
+- unsupported claims such as profit or trends;
+- trace coverage.
 
-The original assignment PDF and supplied evaluation billing files are intentionally excluded from the public repository. Public tests and demo data must use independently created synthetic fixtures.
+If NVIDIA is unavailable or a response cannot be safely validated, deterministic fallback is returned.
+
+## Traced Figures
+
+The frontend displays backend trace entries only. It does not parse numbers from narrative text or construct report paths. Every displayed trace includes the backend display value and deterministic report path.
+
+## Local Setup
+
+Backend:
+
+```bash
+cd backend
+python3 -m pip install -r requirements.txt
+DATABASE_URL=sqlite:///./swasthiq_eod.db python3 -m alembic upgrade head
+DATABASE_URL=sqlite:///./swasthiq_eod.db python3 -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run generate:api
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Open `http://127.0.0.1:5173/reports`.
+
+## Configuration
+
+Backend `.env` values:
+
+- `APP_ENV`
+- `APP_VERSION`
+- `DATABASE_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `CORS_ALLOW_CREDENTIALS=false`
+- `LOG_LEVEL=INFO`
+- `LOG_FORMAT=json` for production
+- `MAX_RECORDS_PER_REQUEST`
+- `MAX_REQUEST_BODY_BYTES`
+- `STORE_REJECTED_RAW_ROWS=false`
+- `NARRATIVE_RATE_LIMIT_PER_MINUTE`
+- `LLM_ENABLED`
+- `LLM_PROVIDER=nvidia`
+- `NVIDIA_API_KEY`
+- `NVIDIA_MODEL`
+- `NVIDIA_BASE_URL`
+- `LLM_TIMEOUT_SECONDS`
+- `LLM_MAX_TOKENS`
+- `LLM_TEMPERATURE`
+- `LLM_TRANSPORT_RETRIES`
+
+Frontend `.env` values:
+
+- `VITE_API_BASE_URL`
+- `VITE_DEV_PROXY_TARGET`
+- `VITE_APP_VERSION`
+
+Never put `NVIDIA_API_KEY` or `DATABASE_URL` in frontend configuration.
+
+## NVIDIA Configuration
+
+`NVIDIA_API_KEY` is optional for local/demo operation. If it is missing, the API returns a grounded deterministic fallback summary. To use live model generation, configure the backend only:
+
+```env
+LLM_ENABLED=true
+LLM_PROVIDER=nvidia
+NVIDIA_API_KEY=<your-nvidia-api-key>
+NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
+```
+
+## Demo Data
+
+Use synthetic files in `demo-data/`:
+
+- `normal-day.json`
+- `partial-import-day.json`
+- `refund-only-day.json`
+- `empty-day.json`
+
+These are independent demo fixtures and not the original evaluation data.
+
+## Deployment
+
+Backend on Railway:
+
+1. Create Railway service from this repo.
+2. Use `railway.toml` and `backend/Dockerfile`.
+3. Add a persistent volume for SQLite.
+4. Set `DATABASE_URL=sqlite:////path/on/volume/swasthiq_eod.db`.
+5. Set `APP_ENV=production`, `LOG_FORMAT=json`, `CORS_ALLOWED_ORIGINS=<vercel-url>`.
+6. Optionally set `NVIDIA_API_KEY`.
+
+Frontend on Vercel:
+
+1. Use `vercel.json`.
+2. Set `VITE_API_BASE_URL=<railway-backend-origin>`.
+3. Build command and output directory are already configured.
+4. SPA rewrites support deep links.
+
+Live deployment was not executed from this workspace.
+
+## Logging, Privacy, And Security
+
+- Request IDs are returned through `X-Request-ID`.
+- Production logs can be JSON.
+- Billing rows, request bodies, narrative text, prompts, raw model output, and secrets must never be logged.
+- CORS is explicit and credentials are disabled.
+- Security headers are applied by backend and Vercel config.
+- Narrative generation has a process-local rate limit.
+
+Guide: `docs/operations/LOGGING_AND_OBSERVABILITY.md`.
+
+## Quality Commands
+
+Backend:
+
+```bash
+cd backend
+python3 -m pytest -m "not live_nvidia" -q
+python3 -c "from app.main import create_app; create_app()"
+DATABASE_URL=sqlite:////tmp/swasthiq_migration_check.db python3 -m alembic upgrade head
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run generate:api
+npm run typecheck
+npm run lint
+npm run build
+```
+
+## Known Limitations
+
+- No authentication or real clinic multi-user controls.
+- SQLite persistence on Railway requires a persistent volume.
+- Narrative rate limiting is process-local.
+- Live NVIDIA generation depends on a valid backend-only key.
+- No profit or margin is computed because cost price is not part of the input schema.
+
+## Submission Links
+
+- Public repository: `TODO`
+- Frontend live URL: `TODO`
+- Backend health URL: `TODO`
+- Demo video: `TODO`
+
+## Demo Video Guide
+
+Use `docs/submission/DEMO_VIDEO_SCRIPT.md`.

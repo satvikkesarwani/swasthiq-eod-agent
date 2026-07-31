@@ -1,0 +1,39 @@
+[
+  {
+    "clinic_id": "DEMO-PARTIAL-001",
+    "visit_id": "P-001",
+    "timestamp": "2026-08-02T11:00:00Z",
+    "doctor_id": "DR-A",
+    "line_items": [
+      { "drug_name": "Cough Syrup", "qty": 2, "unit_price_paise": 6500 }
+    ],
+    "payment_mode": "upi",
+    "amount_paid_paise": 12000,
+    "discount_paise": 1000,
+    "is_refund": false
+  },
+  {
+    "clinic_id": "DEMO-PARTIAL-001",
+    "visit_id": "P-002",
+    "timestamp": "2026-08-02T12:00:00Z",
+    "doctor_id": "DR-B",
+    "line_items": [],
+    "payment_mode": "cash",
+    "amount_paid_paise": 1000,
+    "discount_paise": 0,
+    "is_refund": false
+  },
+  {
+    "clinic_id": "DEMO-PARTIAL-001",
+    "visit_id": "P-003",
+    "timestamp": "2026-08-02T13:00:00Z",
+    "doctor_id": "DR-C",
+    "line_items": [
+      { "drug_name": "Vitamin D", "qty": 1, "unit_price_paise": 10000 }
+    ],
+    "payment_mode": "voucher",
+    "amount_paid_paise": 10000,
+    "discount_paise": 0,
+    "is_refund": false
+  }
+]

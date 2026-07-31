@@ -54,7 +54,7 @@ Environment configuration:
 
 ```env
 LLM_PROVIDER=nvidia
-NVIDIA_API_KEY=nvapi-...
+NVIDIA_API_KEY=<your-nvidia-api-key>
 NVIDIA_MODEL=nvidia/nvidia-nemotron-nano-9b-v2
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 LLM_TIMEOUT_SECONDS=20

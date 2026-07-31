@@ -1,0 +1,230 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.header {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.headerTitle {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-teal);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: 0;
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.context dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.context dd {
+  margin: 0;
+}
+
+.actions,
+.bottomNav,
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.contextBanner,
+.statusBanner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: rgba(99, 216, 215, 0.1);
+  border: 1px solid rgba(99, 216, 215, 0.34);
+  border-radius: var(--radius-md);
+}
+
+.contextBanner.partial,
+.contextBanner.empty,
+.contextBanner.refund_only,
+.contextBanner.warning,
+.statusBanner.fallback {
+  background: rgba(244, 200, 111, 0.1);
+  border-color: rgba(244, 200, 111, 0.34);
+}
+
+.statusBanner.error {
+  background: rgba(255, 126, 126, 0.1);
+  border-color: rgba(255, 126, 126, 0.34);
+}
+
+.contextBanner h2,
+.statusBanner h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.muted,
+.contextBanner p,
+.statusBanner p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.mainGrid,
+.supportGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.summaryText {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 72ch;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.emptySummary {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.traceList,
+.metricList,
+.detailsGrid {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traceItem,
+.metricItem,
+.detailItem {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.traceItem {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.traceValue {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.tracePath,
+.detailItem code {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.traceMeta,
+.detailItem span,
+.metricItem p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.detailItem strong,
+.metricItem strong,
+.traceItem strong {
+  overflow-wrap: anywhere;
+}
+
+.copyNotice {
+  min-height: 1.5rem;
+  color: var(--color-teal);
+  font-weight: 700;
+}
+
+.errorPanel,
+.skeleton {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.supportDetails {
+  color: var(--color-text-muted);
+}
+
+.skeletonBlock {
+  min-height: 8rem;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeletonBlock {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (min-width: 880px) {
+  .mainGrid {
+    grid-template-columns: minmax(0, 7fr) minmax(20rem, 5fr);
+  }
+
+  .supportGrid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  }
+
+  .detailsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1080px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

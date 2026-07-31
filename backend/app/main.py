@@ -1,4 +1,3 @@
-import logging
 import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -13,16 +12,13 @@ from app.api.routes_health import router as health_router
 from app.api.routes_narratives import router as narratives_router
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
+from app.core.logging import configure_logging, get_logger
+from app.core.rate_limit import FixedWindowRateLimiter
+from app.core.request_context import reset_request_id, set_request_id
 from app.db.session import Base, build_engine, build_session_factory
 from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledNarrativeProvider
 
-logger = logging.getLogger(__name__)
-logging.getLogger().setLevel(logging.INFO)
-logging.getLogger("app").setLevel(logging.INFO)
-if not logging.getLogger("app").handlers:
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-    logging.getLogger("app").addHandler(handler)
+logger = get_logger(__name__)
 
 
 def _error_response(*, request: Request, code: str, message: str, status_code: int) -> JSONResponse:
@@ -57,6 +53,7 @@ def _build_provider(settings: Settings):
 
 def create_app(*, settings: Settings | None = None, narrative_provider=None) -> FastAPI:
     settings = settings or get_settings()
+    configure_logging(level=settings.log_level, log_format=settings.log_format)
     engine = build_engine(settings.database_url)
     if settings.app_env == "test":
         Base.metadata.create_all(engine)
@@ -77,14 +74,29 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     app.state.engine = engine
     app.state.session_factory = session_factory
     app.state.narrative_provider = narrative_provider or _build_provider(settings)
+    app.state.narrative_rate_limiter = FixedWindowRateLimiter(
+        limit=settings.narrative_rate_limit_per_minute,
+        window_seconds=60,
+    )
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=False,
+        allow_credentials=settings.cors_allow_credentials,
         allow_methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["Content-Type", "X-Request-ID"],
     )
+
+    @app.middleware("http")
+    async def security_headers_middleware(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+        if settings.app_env == "production":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
 
     @app.middleware("http")
     async def request_body_limit_middleware(request: Request, call_next):
@@ -144,15 +156,15 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or f"req_{uuid4().hex}"
         request.state.request_id = request_id
+        request_token = set_request_id(request_id)
         started_at = time.perf_counter()
         logger.info(
-            "request.start request_id=%s method=%s path=%s query=%s content_length=%s origin=%s",
+            "request.start request_id=%s method=%s path=%s content_length=%s origin_present=%s",
             request_id,
             request.method,
             request.url.path,
-            request.url.query,
             request.headers.get("content-length"),
-            request.headers.get("origin"),
+            request.headers.get("origin") is not None,
         )
         try:
             response = await call_next(request)
@@ -164,6 +176,7 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
                 request.url.path,
                 round((time.perf_counter() - started_at) * 1000),
             )
+            reset_request_id(request_token)
             raise
         response.headers["X-Request-ID"] = request_id
         logger.info(
@@ -174,6 +187,7 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
             response.status_code,
             round((time.perf_counter() - started_at) * 1000),
         )
+        reset_request_id(request_token)
         return response
 
     @app.exception_handler(AppError)
@@ -186,9 +200,20 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
             exc.message,
             len(exc.details),
         )
+        headers = {"X-Request-ID": getattr(request.state, "request_id", None) or ""}
+        retry_after = next(
+            (
+                item.get("retry_after_seconds")
+                for item in exc.details
+                if isinstance(item, dict) and isinstance(item.get("retry_after_seconds"), int)
+            ),
+            None,
+        )
+        if retry_after is not None:
+            headers["Retry-After"] = str(retry_after)
         return JSONResponse(
             status_code=exc.status_code,
-            headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},
+            headers=headers,
             content={
                 "error": {
                     "code": exc.code,

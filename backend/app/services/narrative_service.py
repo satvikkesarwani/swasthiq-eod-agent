@@ -1,4 +1,5 @@
 from typing import Any
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,8 @@ from app.integrations.llm_provider import NarrativeProvider
 from app.repositories.clinic_day_repository import ClinicDayRepository
 from app.repositories.narrative_repository import NarrativeRepository
 from app.schemas.narrative import NarrativeResponse
+
+logger = logging.getLogger(__name__)
 
 
 class NarrativeService:
@@ -63,6 +66,13 @@ class NarrativeService:
 
         existing = self.narratives.get_for_clinic_day(clinic_day.id)
         if existing and existing.report_hash == clinic_day.report_hash and not force_regenerate:
+            logger.info(
+                "narrative.cache_hit clinic_id=%s business_date=%s status=%s trace_count=%s",
+                clinic_id,
+                business_date,
+                existing.status,
+                len(existing.traces_json),
+            )
             return NarrativeResponse(
                 status=existing.status,
                 summary=existing.summary_text,
@@ -86,6 +96,7 @@ class NarrativeService:
         rendered: RenderedNarrative
 
         try:
+            logger.info("narrative.generation_started clinic_id=%s business_date=%s provider=%s", clinic_id, business_date, self.provider.name)
             provider_result = await self.provider.generate_draft(generation_input)
             provider_name = provider_result.provider
             model_name = provider_result.model
@@ -98,7 +109,14 @@ class NarrativeService:
                     flags=flags,
                 )
             except GroundingValidationError as validation_error:
+                logger.warning(
+                    "narrative.validation_failed clinic_id=%s business_date=%s codes=%s",
+                    clinic_id,
+                    business_date,
+                    [code.value for code in validation_error.codes],
+                )
                 try:
+                    logger.info("narrative.repair_started clinic_id=%s business_date=%s", clinic_id, business_date)
                     repair_result = await self.provider.generate_draft(
                         generation_input,
                         repair_feedback=[code.value for code in validation_error.codes],
@@ -113,25 +131,36 @@ class NarrativeService:
                         day_type=day_type,
                         flags=flags,
                     )
+                    logger.info("narrative.repair_completed clinic_id=%s business_date=%s", clinic_id, business_date)
                 except (NarrativeProviderError, GroundingValidationError):
+                    logger.warning("narrative.fallback_used clinic_id=%s business_date=%s reason=REPAIR_FAILED", clinic_id, business_date)
                     rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
                     status = "fallback"
                     provider_name = self.provider.name if self.provider.name != "disabled" else None
                     model_name = self.provider.model
                     fallback_reason_code = "REPAIR_FAILED"
         except NarrativeProviderError as exc:
+            logger.warning(
+                "narrative.provider_failed clinic_id=%s business_date=%s provider=%s reason=%s",
+                clinic_id,
+                business_date,
+                self.provider.name,
+                self._fallback_reason(exc),
+            )
             rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
             model_name = self.provider.model
             fallback_reason_code = self._fallback_reason(exc)
         except GroundingValidationError:
+            logger.warning("narrative.fallback_used clinic_id=%s business_date=%s reason=REPAIR_FAILED", clinic_id, business_date)
             rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
             model_name = self.provider.model
             fallback_reason_code = "REPAIR_FAILED"
         except Exception:
+            logger.exception("narrative.unexpected_fallback clinic_id=%s business_date=%s", clinic_id, business_date)
             rendered = self._fallback_rendered(clinic_day=clinic_day, catalogue=catalogue, day_type=day_type, flags=flags)
             status = "fallback"
             provider_name = self.provider.name if self.provider.name != "disabled" else None
@@ -143,6 +172,7 @@ class NarrativeService:
         if current_clinic_day is None:
             raise AppError(code="CLINIC_DAY_NOT_FOUND", message="Clinic-day report was not found.", status_code=404)
         if current_clinic_day.report_hash != generation_input.report_hash:
+            logger.warning("narrative.stale_result_discarded clinic_id=%s business_date=%s", clinic_id, business_date)
             raise AppError(
                 code="NARRATIVE_REPORT_CHANGED",
                 message="Clinic-day report changed while the narrative was being generated. Please retry.",
@@ -166,7 +196,16 @@ class NarrativeService:
                 fallback_reason_code=fallback_reason_code,
             )
             self.session.commit()
+            logger.info(
+                "narrative.generation_completed clinic_id=%s business_date=%s status=%s trace_count=%s fallback_reason=%s",
+                clinic_id,
+                business_date,
+                status,
+                len(trace_payload),
+                fallback_reason_code,
+            )
         except Exception:
+            logger.exception("narrative.persistence_failed clinic_id=%s business_date=%s", clinic_id, business_date)
             self.session.rollback()
             raise
 

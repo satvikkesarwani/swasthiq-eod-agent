@@ -103,7 +103,7 @@ The existing provider protocol may remain under `integrations/`, but the concret
 
 ```env
 LLM_PROVIDER=nvidia
-NVIDIA_API_KEY=nvapi-...
+NVIDIA_API_KEY=<your-nvidia-api-key>
 NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 LLM_TIMEOUT_SECONDS=20
