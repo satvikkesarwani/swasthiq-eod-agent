@@ -19,6 +19,6 @@ COPY start.sh ./
 RUN chmod +x start.sh backend/scripts/start.sh && chown -R appuser:appuser /app
 
 USER appuser
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["./start.sh"]

@@ -16,6 +16,6 @@ COPY scripts ./scripts
 RUN chmod +x scripts/start.sh && chown -R appuser:appuser /app
 
 USER appuser
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["./scripts/start.sh"]
