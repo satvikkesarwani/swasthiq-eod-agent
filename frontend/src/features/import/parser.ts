@@ -1,6 +1,7 @@
 import { validateBillingFile } from "./validation";
 import type { BillingFileError, ParsedBillingFile } from "./types";
 import { logDiagnostic } from "../../lib/diagnostics";
+import { parseStrictJson } from "./jsonSafety";
 
 export class BillingFileParseError extends Error {
   readonly code: BillingFileError["code"];
@@ -16,22 +17,27 @@ function fileError(code: BillingFileError["code"], message: string): BillingFile
   return { code, message };
 }
 
-function readFileText(file: File): Promise<string> {
-  if (typeof file.text === "function") {
-    return file.text();
+async function readFileText(file: File): Promise<string> {
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  if (typeof file.arrayBuffer === "function") {
+    return decoder.decode(await file.arrayBuffer());
   }
   if (typeof FileReader !== "undefined") {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.addEventListener("load", () => {
         const result = reader.result;
-        resolve(typeof result === "string" ? result : "");
+        try {
+          resolve(result instanceof ArrayBuffer ? decoder.decode(result) : "");
+        } catch (error) {
+          reject(error instanceof Error ? error : new Error("File decode failed."));
+        }
       });
       reader.addEventListener("error", () => reject(reader.error ?? new Error("File read failed.")));
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     });
   }
-  return new Response(file).text();
+  return decoder.decode(await new Response(file).arrayBuffer());
 }
 
 export async function parseBillingLogFile(file: File): Promise<ParsedBillingFile> {
@@ -66,7 +72,7 @@ export async function parseBillingLogFile(file: File): Promise<ParsedBillingFile
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readableText) as unknown;
+    parsed = parseStrictJson(readableText);
   } catch (error) {
     logDiagnostic("warn", "import.parser", "JSON parse failed", { fileName: file.name, error });
     throw new BillingFileParseError(fileError("INVALID_JSON", "The selected file is not valid JSON."));

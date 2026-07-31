@@ -95,6 +95,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityCounts */
+        ActivityCounts: {
+            /** Accepted Visit Count */
+            accepted_visit_count: number;
+            /** Refund Visit Count */
+            refund_visit_count: number;
+            /** Sale Line Item Count */
+            sale_line_item_count: number;
+            /** Sale Visit Count */
+            sale_visit_count: number;
+        };
         /** AnalyticsReport */
         AnalyticsReport: {
             peak_hour: components["schemas"]["PeakHour"] | null;
@@ -104,24 +115,6 @@ export interface components {
             top_medicines_by_quantity: components["schemas"]["MedicineQuantityRanking"][];
             /** Top Medicines By Revenue */
             top_medicines_by_revenue: components["schemas"]["MedicineRevenueRanking"][];
-        };
-        /** BillingLogRequest */
-        BillingLogRequest: {
-            /**
-             * Clinic Location
-             * @description Optional clinic location.
-             */
-            clinic_location?: string | null;
-            /**
-             * Clinic Name
-             * @description Optional clinic display name.
-             */
-            clinic_name?: string | null;
-            /**
-             * Records
-             * @description Submitted clinic-day billing rows. May be empty for a valid no-activity day.
-             */
-            records: unknown[];
         };
         /** ClinicDayListItem */
         ClinicDayListItem: {
@@ -218,6 +211,7 @@ export interface components {
         };
         /** DeterministicReport */
         DeterministicReport: {
+            activity_counts: components["schemas"]["ActivityCounts"];
             analytics: components["schemas"]["AnalyticsReport"];
             /** Data Quality Warnings */
             data_quality_warnings: components["schemas"]["DataQualityWarning"][];
@@ -304,10 +298,25 @@ export interface components {
             errors?: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Issues Truncated
+             * @default false
+             */
+            issues_truncated: boolean;
             /** Received Rows */
             received_rows: number;
             /** Rejected Rows */
             rejected_rows: number;
+            /**
+             * Returned Issue Count
+             * @default 0
+             */
+            returned_issue_count: number;
+            /**
+             * Total Issue Count
+             * @default 0
+             */
+            total_issue_count: number;
         };
         /** MedicineQuantityRanking */
         MedicineQuantityRanking: {
@@ -396,6 +405,8 @@ export interface components {
             };
             /** Collection Rate */
             collection_rate: number | null;
+            /** Collection Rate Basis Points */
+            collection_rate_basis_points?: number | null;
             /** Pending Visit Count */
             pending_visit_count: number;
             /** Refund Visit Count */
@@ -560,7 +571,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BillingLogRequest"];
+                "application/json": {
+                    clinic_location?: string | null;
+                    clinic_name?: string | null;
+                    records: unknown[];
+                };
             };
         };
         responses: {

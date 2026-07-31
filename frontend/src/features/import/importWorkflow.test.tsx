@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "../../app/AppProviders";
 import { AppShell } from "../../components/layout/AppShell";
 import { ReportsHomePage } from "../../pages/ReportsHomePage";
-import { createdImportResponse, partialImportResponse, recentReportsResponse, safeIssuesResponse } from "../../test/fixtures";
+import { createdImportResponse, partialImportResponse, recentReportsResponse, safeIssuesResponse, validSalesRecords } from "../../test/fixtures";
 import { reportsLoader } from "../reports/loader";
 
 vi.mock("../../api/endpoints", () => ({
@@ -98,8 +98,8 @@ describe("billing import workflow", () => {
     expect(dateInput).toBeDefined();
     await userEvent.type(clinicInput as HTMLElement, "CLN-TST-001");
     await userEvent.type(dateInput as HTMLElement, "2026-07-31");
-    await userEvent.upload(screen.getByLabelText("Billing log JSON file"), new File(["[]"], "empty.json", { type: "application/json" }));
-    await screen.findByText("empty.json");
+    await userEvent.upload(screen.getByLabelText("Billing log JSON file"), new File([JSON.stringify(validSalesRecords)], "billing.json", { type: "application/json" }));
+    await screen.findByText("billing.json");
     await userEvent.click(screen.getByRole("button", { name: "Validate and generate report" }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/reports/CLN-TST-001/2026-07-31/reconciliation"));

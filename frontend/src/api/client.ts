@@ -1,5 +1,6 @@
 import type { ApiErrorPayload } from "./types";
 import { logDiagnostic } from "../lib/diagnostics";
+import { stringifySafeJson } from "../features/import/jsonSafety";
 
 const API_PREFIX = "/api/v1";
 export const API_OK_EVENT = "swasthiq:api-ok";
@@ -164,7 +165,7 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
   let body: string | undefined;
   if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
-    body = JSON.stringify(options.body);
+    body = stringifySafeJson(options.body);
   }
 
   let response: Response | undefined;

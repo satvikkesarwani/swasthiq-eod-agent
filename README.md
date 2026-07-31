@@ -102,12 +102,19 @@ All money is integer paise in the backend.
 
 The deterministic layer never calls an LLM.
 
+Strictness notes:
+
+- Integer money fields are validated as strict JSON integers and checked against the exact safe range before aggregation.
+- Collection rate is stored as integer basis points; the floating rate is retained only for existing UI compatibility.
+
 ## Analytics Definitions
 
 - Revenue by hour uses accepted non-refund sales and UTC timestamps.
 - Peak hour is selected by the backend.
 - Top medicines by quantity and by revenue are separate rankings.
 - Refund rows do not create sales analytics.
+- Day type decisions use accepted activity counts, so refund-only and zero-value sales days are not mistaken for empty days.
+- Medicine-name typo checks are bounded by configured comparison and warning limits.
 
 ## Grounded Narrative Design
 
@@ -161,6 +168,15 @@ Backend `.env` values:
 - `LOG_FORMAT=json` for production
 - `MAX_RECORDS_PER_REQUEST`
 - `MAX_REQUEST_BODY_BYTES`
+- `MAX_JSON_DEPTH`
+- `MAX_JSON_NODES`
+- `MAX_LINE_ITEMS_PER_RECORD`
+- `MAX_ISSUES_PER_ROW`
+- `MAX_ISSUES_PER_REQUEST`
+- `MAX_PERSISTED_ISSUES_PER_REPORT`
+- `MAX_MEDICINE_WARNINGS_PER_REPORT`
+- `MAX_MEDICINE_COMPARISONS_PER_REPORT`
+- `MAX_SAFE_PAISE`
 - `STORE_REJECTED_RAW_ROWS=false`
 - `NARRATIVE_RATE_LIMIT_PER_MINUTE`
 - `LLM_ENABLED`

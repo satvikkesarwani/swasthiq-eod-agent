@@ -47,8 +47,9 @@ export const createdImportResponse: ClinicDayDetail = {
   business_date: "2026-07-31",
   status: "completed",
   operation: "created",
-  ingestion: { received_rows: 1, accepted_rows: 1, rejected_rows: 0 },
+  ingestion: { received_rows: 1, accepted_rows: 1, rejected_rows: 0, total_issue_count: 0, returned_issue_count: 0, issues_truncated: false },
   report: {
+    activity_counts: { accepted_visit_count: 1, sale_visit_count: 1, refund_visit_count: 0, sale_line_item_count: 1 },
     reconciliation: {
       total_billed_paise: 1000,
       total_collected_paise: 1000,
@@ -56,6 +57,7 @@ export const createdImportResponse: ClinicDayDetail = {
       total_refunds_paise: 0,
       total_discount_paise: 0,
       collection_rate: 1,
+      collection_rate_basis_points: 10000,
       by_payment_mode: {},
       refund_visit_count: 0,
       pending_visit_count: 0,
@@ -74,7 +76,7 @@ export const partialImportResponse: ClinicDayDetail = {
   ...createdImportResponse,
   status: "completed_with_errors",
   operation: "replaced",
-  ingestion: { received_rows: 3, accepted_rows: 1, rejected_rows: 2 },
+  ingestion: { received_rows: 3, accepted_rows: 1, rejected_rows: 2, total_issue_count: 2, returned_issue_count: 2, issues_truncated: false },
 };
 
 export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): ClinicDayDetail {
@@ -86,8 +88,9 @@ export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): C
     clinic_location: "Kanpur, Uttar Pradesh",
     business_date: "2026-07-31",
     status: "completed",
-    ingestion: { received_rows: 3, accepted_rows: 3, rejected_rows: 0 },
+    ingestion: { received_rows: 3, accepted_rows: 3, rejected_rows: 0, total_issue_count: 0, returned_issue_count: 0, issues_truncated: false },
     report: {
+      activity_counts: { accepted_visit_count: 3, sale_visit_count: 2, refund_visit_count: 1, sale_line_item_count: 3 },
       reconciliation: {
         total_billed_paise: 319000,
         total_collected_paise: 317200,
@@ -95,6 +98,7 @@ export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): C
         total_refunds_paise: 1050,
         total_discount_paise: 1800,
         collection_rate: 0.123456,
+        collection_rate_basis_points: 1235,
         pending_visit_count: 1,
         refund_visit_count: 1,
         by_payment_mode: {
@@ -119,6 +123,7 @@ export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): C
     report: {
       ...base.report,
       ...overrides.report,
+      activity_counts: { ...base.report.activity_counts, ...overrides.report?.activity_counts },
       reconciliation: { ...base.report.reconciliation, ...overrides.report?.reconciliation },
       analytics: { ...base.report.analytics, ...overrides.report?.analytics },
       data_quality_warnings: overrides.report?.data_quality_warnings ?? base.report.data_quality_warnings,
@@ -127,8 +132,9 @@ export function makeClinicDayReport(overrides: Partial<ClinicDayDetail> = {}): C
 }
 
 export const emptyDayReport = makeClinicDayReport({
-  ingestion: { received_rows: 0, accepted_rows: 0, rejected_rows: 0 },
+  ingestion: { received_rows: 0, accepted_rows: 0, rejected_rows: 0, total_issue_count: 0, returned_issue_count: 0, issues_truncated: false },
   report: {
+    activity_counts: { accepted_visit_count: 0, sale_visit_count: 0, refund_visit_count: 0, sale_line_item_count: 0 },
     reconciliation: {
       total_billed_paise: 0,
       total_collected_paise: 0,
@@ -136,6 +142,7 @@ export const emptyDayReport = makeClinicDayReport({
       total_refunds_paise: 0,
       total_discount_paise: 0,
       collection_rate: null,
+      collection_rate_basis_points: null,
       pending_visit_count: 0,
       refund_visit_count: 0,
       by_payment_mode: {
@@ -150,8 +157,9 @@ export const emptyDayReport = makeClinicDayReport({
 });
 
 export const refundOnlyReport = makeClinicDayReport({
-  ingestion: { received_rows: 2, accepted_rows: 2, rejected_rows: 0 },
+  ingestion: { received_rows: 2, accepted_rows: 2, rejected_rows: 0, total_issue_count: 0, returned_issue_count: 0, issues_truncated: false },
   report: {
+    activity_counts: { accepted_visit_count: 2, sale_visit_count: 0, refund_visit_count: 2, sale_line_item_count: 0 },
     reconciliation: {
       total_billed_paise: 0,
       total_collected_paise: 0,
@@ -159,6 +167,7 @@ export const refundOnlyReport = makeClinicDayReport({
       total_refunds_paise: 49000,
       total_discount_paise: 0,
       collection_rate: null,
+      collection_rate_basis_points: null,
       pending_visit_count: 0,
       refund_visit_count: 2,
       by_payment_mode: {
@@ -174,11 +183,12 @@ export const refundOnlyReport = makeClinicDayReport({
 
 export const partialReconciliationReport = makeClinicDayReport({
   status: "completed_with_errors",
-  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2 },
+  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2, total_issue_count: 2, returned_issue_count: 2, issues_truncated: false },
 });
 
 export const analyticsReport = makeClinicDayReport({
   report: {
+    activity_counts: makeClinicDayReport().report.activity_counts,
     reconciliation: makeClinicDayReport().report.reconciliation,
     analytics: {
       revenue_by_hour: [
@@ -203,8 +213,9 @@ export const analyticsReport = makeClinicDayReport({
 
 export const partialAnalyticsReport = makeClinicDayReport({
   status: "completed_with_errors",
-  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2 },
+  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2, total_issue_count: 2, returned_issue_count: 2, issues_truncated: false },
   report: {
+    activity_counts: makeClinicDayReport().report.activity_counts,
     reconciliation: makeClinicDayReport().report.reconciliation,
     analytics: analyticsReport.report.analytics,
     data_quality_warnings: [
@@ -216,6 +227,7 @@ export const partialAnalyticsReport = makeClinicDayReport({
 export const warningReport = makeClinicDayReport({
   clinic_name: "<script>alert('clinic')</script> Clinic",
   report: {
+    activity_counts: makeClinicDayReport().report.activity_counts,
     reconciliation: makeClinicDayReport().report.reconciliation,
     analytics: analyticsReport.report.analytics,
     data_quality_warnings: [

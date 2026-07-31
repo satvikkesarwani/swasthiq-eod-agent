@@ -53,6 +53,8 @@ def test_non_object_row_is_rejected():
     assert not result.accepted
     assert result.rejected[0].code == "ROW_MUST_BE_OBJECT"
     assert result.rejected[0].raw_row is None
+    assert result.total_issue_count == 1
+    assert result.returned_issue_count == 1
 
 
 @pytest.mark.parametrize(
@@ -115,6 +117,9 @@ def test_partial_ingestion_excludes_rejected_rows_from_outputs():
     assert report.reconciliation.total_billed_paise == 1_000
     assert report.analytics.revenue_by_hour[9].revenue_paise == 1_000
     assert_reconciliation_invariants(report)
+    assert report.activity_counts.sale_visit_count == 1
+    assert report.activity_counts.refund_visit_count == 0
+    assert report.reconciliation.collection_rate_basis_points == 10000
 
 
 def test_refunds_do_not_contribute_to_sales_or_medicine_rankings():
@@ -134,6 +139,8 @@ def test_refunds_do_not_contribute_to_sales_or_medicine_rankings():
     assert report.reconciliation.total_billed_paise == 1_000
     assert report.analytics.revenue_by_hour[9].revenue_paise == 0
     assert report.analytics.top_medicines_by_quantity[0].drug_name == "MED-B"
+    assert report.activity_counts.sale_visit_count == 1
+    assert report.activity_counts.refund_visit_count == 1
     assert_reconciliation_invariants(report)
 
 
@@ -171,3 +178,44 @@ def test_non_refund_visit_financial_invariants_hold_for_discount_and_partial_pay
     assert visit.outstanding_paise == visit.billed_paise - visit.amount_paid_paise
     assert report.reconciliation.pending_visit_count == 1
     assert_reconciliation_invariants(report)
+
+
+def test_issue_count_is_capped_but_total_is_preserved():
+    candidate = row()
+    candidate.pop("payment_mode")
+    candidate["doctor_id"] = ""
+    candidate["line_items"] = [{"drug_name": "", "qty": 0, "unit_price_paise": -1}]
+
+    result = validate_billing_log(
+        clinic_id="CLN-001",
+        business_date=BUSINESS_DATE,
+        records=[candidate],
+        max_issues_per_row=2,
+        max_issues_per_request=2,
+    )
+
+    assert result.total_issue_count > result.returned_issue_count
+    assert result.returned_issue_count == 2
+    assert result.issues_truncated is True
+
+
+def test_rejects_stringified_integer_without_coercion():
+    candidate = row()
+    candidate["amount_paid_paise"] = "1000"
+
+    result = validate_billing_log(clinic_id="CLN-001", business_date=BUSINESS_DATE, records=[candidate])
+
+    assert not result.accepted
+    assert result.rejected[0].field == "amount_paid_paise"
+    assert result.rejected[0].code == "SCHEMA_VALIDATION_FAILED"
+
+
+def test_refund_only_activity_count_prevents_empty_classification():
+    refund = row(visit_id="REF", is_refund=True, amount_paid_paise=-1_000)
+    result = validate_billing_log(clinic_id="CLN-001", business_date=BUSINESS_DATE, records=[refund])
+    report = build_deterministic_report(result.accepted)
+
+    assert report.reconciliation.total_billed_paise == 0
+    assert report.activity_counts.accepted_visit_count == 1
+    assert report.activity_counts.sale_visit_count == 0
+    assert report.activity_counts.refund_visit_count == 1

@@ -67,6 +67,8 @@ def test_create_read_and_list_clinic_day(client, valid_rows):
     assert body["operation"] == "created"
     assert body["status"] == "completed"
     assert body["report"]["reconciliation"]["total_billed_paise"] == 10500
+    assert body["report"]["activity_counts"]["sale_visit_count"] == 2
+    assert body["report"]["reconciliation"]["collection_rate_basis_points"] == 9524
 
     get_response = client.get("/api/v1/clinic-days/CLN-001/2026-07-27")
     assert get_response.status_code == 200
@@ -90,8 +92,45 @@ def test_partial_ingestion_uses_only_valid_rows(client, valid_rows):
     assert body["status"] == "completed_with_errors"
     assert body["ingestion"]["accepted_rows"] == 1
     assert body["ingestion"]["rejected_rows"] == 1
+    assert body["ingestion"]["total_issue_count"] == 1
+    assert body["ingestion"]["returned_issue_count"] == 1
+    assert body["ingestion"]["issues_truncated"] is False
     assert body["ingestion"]["errors"][0]["field_path"] == "payment_mode"
     assert body["ingestion"]["errors"][0]["error_code"] == "FIELD_REQUIRED"
+
+
+def test_strict_json_rejects_duplicate_keys_and_non_standard_numbers(client, valid_rows):
+    duplicate = b'{"records":[],"records":[]}'
+    duplicate_response = client.put(
+        "/api/v1/clinic-days/CLN-001/2026-07-27",
+        content=duplicate,
+        headers={"Content-Type": "application/json"},
+    )
+    assert duplicate_response.status_code == 422
+    assert duplicate_response.json()["error"]["code"] == "DUPLICATE_JSON_KEY"
+
+    non_standard = b'{"records":[{"clinic_id":"CLN-001","visit_id":"V","timestamp":"2026-07-27T09:00:00Z","doctor_id":"D","line_items":[{"drug_name":"MED","qty":1,"unit_price_paise":100}],"payment_mode":"cash","amount_paid_paise":NaN,"discount_paise":0,"is_refund":false}]}'
+    non_standard_response = client.put(
+        "/api/v1/clinic-days/CLN-001/2026-07-27",
+        content=non_standard,
+        headers={"Content-Type": "application/json"},
+    )
+    assert non_standard_response.status_code == 422
+    assert non_standard_response.json()["error"]["code"] == "NON_STANDARD_JSON_CONSTANT"
+
+
+def test_http_import_rejects_string_integer_and_boolean(client, valid_rows):
+    bad = dict(valid_rows[0])
+    bad["amount_paid_paise"] = "4000"
+    bad["is_refund"] = "false"
+
+    response = client.put("/api/v1/clinic-days/CLN-001/2026-07-27", json={"records": [bad]})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "NO_VALID_RECORDS"
+    fields = {detail["field"] for detail in response.json()["error"]["details"]}
+    assert "amount_paid_paise" in fields
+    assert "is_refund" in fields
 
 
 def test_all_invalid_rows_do_not_create_report(client, valid_rows):

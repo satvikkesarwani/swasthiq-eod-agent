@@ -80,6 +80,9 @@ class ChatNVIDIANarrativeProvider:
         return key_index
 
     def _build_chain(self, key_index: int):
+        injected_chain = getattr(self, "_chain", None)
+        if injected_chain is not None:
+            return injected_chain
         if key_index not in self._chains:
             if self._chat_model_factory is None:
                 from langchain_nvidia_ai_endpoints import ChatNVIDIA

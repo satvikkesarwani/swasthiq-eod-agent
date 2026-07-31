@@ -58,6 +58,9 @@ class ClinicDayRepository:
         status: str,
         received_rows: int,
         rejected_row_count: int,
+        total_issue_count: int,
+        returned_issue_count: int,
+        issues_truncated: bool,
         accepted: list[ValidatedVisit],
         rejected: list[RowIssue],
         store_rejected_raw_rows: bool,
@@ -86,6 +89,9 @@ class ClinicDayRepository:
                 received_rows=received_rows,
                 accepted_rows=len(accepted),
                 rejected_rows=rejected_row_count,
+                total_issue_count=total_issue_count,
+                returned_issue_count=returned_issue_count,
+                issues_truncated=issues_truncated,
                 source_hash=source_hash,
                 report_hash=report_hash,
                 report_json=report_json,
@@ -108,6 +114,9 @@ class ClinicDayRepository:
             clinic_day.received_rows = received_rows
             clinic_day.accepted_rows = len(accepted)
             clinic_day.rejected_rows = rejected_row_count
+            clinic_day.total_issue_count = total_issue_count
+            clinic_day.returned_issue_count = returned_issue_count
+            clinic_day.issues_truncated = issues_truncated
             clinic_day.source_hash = source_hash
             clinic_day.report_hash = report_hash
             clinic_day.report_json = report_json

@@ -1,12 +1,16 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.api.serializers import serialize_clinic_day, serialize_ingestion_issues, serialize_list_item
+from app.core.limits import MAX_CLINIC_ID_LENGTH
 from app.core.errors import AppError
+from app.core.safe_strings import clean_user_string, safe_error_code, safe_error_message, safe_field_path
+from app.core.strict_json import decode_strict_json_body
 from app.repositories.clinic_day_repository import ClinicDayRepository
 from app.schemas.ingestion import BillingLogRequest
 from app.schemas.report import ClinicDayListResponse, ClinicDayResponse, ErrorResponse, IngestionIssueListResponse
@@ -22,6 +26,42 @@ ERROR_RESPONSES = {
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse},
 }
+
+
+def parse_business_date(value: str) -> date:
+    if not isinstance(value, str):
+        raise AppError(code="INVALID_FIELD_TYPE", message="Business date must be YYYY-MM-DD.", status_code=422)
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise AppError(code="INVALID_IDENTIFIER", message="Business date must be a valid YYYY-MM-DD date.", status_code=422) from exc
+    if parsed.isoformat() != value:
+        raise AppError(code="INVALID_IDENTIFIER", message="Business date must be a valid YYYY-MM-DD date.", status_code=422)
+    return parsed
+
+
+async def parse_billing_log_request(request: Request) -> BillingLogRequest:
+    settings = request.app.state.settings
+    decoded = decode_strict_json_body(
+        await request.body(),
+        max_depth=settings.max_json_depth,
+        max_nodes=settings.max_json_nodes,
+    )
+    if not isinstance(decoded, dict):
+        raise AppError(code="INVALID_JSON", message="Import request must be a JSON object.", status_code=422)
+    try:
+        payload = BillingLogRequest.model_validate(decoded)
+    except ValidationError as exc:
+        details = [
+            {
+                "field": safe_field_path(".".join(str(part) for part in error["loc"])),
+                "code": safe_error_code("INVALID_FIELD_TYPE" if error["type"].startswith(("int_", "bool_", "string_type", "datetime_")) else error["type"]),
+                "message": safe_error_message(error["msg"]),
+            }
+            for error in exc.errors(include_url=False)[: settings.max_issues_per_request]
+        ]
+        raise AppError(code="INVALID_FIELD_TYPE", message="Import request fields could not be validated.", status_code=422, details=details) from exc
+    return payload
 
 
 @router.get("", response_model=ClinicDayListResponse, responses=ERROR_RESPONSES)
@@ -52,20 +92,36 @@ def list_clinic_days(
     return ClinicDayListResponse(items=[serialize_list_item(item) for item in items], limit=limit, offset=offset, count=len(items))
 
 
-@router.put("/{clinic_id}/{business_date}", response_model=ClinicDayResponse, responses=ERROR_RESPONSES)
+@router.put(
+    "/{clinic_id}/{business_date}",
+    response_model=ClinicDayResponse,
+    responses=ERROR_RESPONSES,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/BillingLogRequest"}
+                }
+            },
+        }
+    },
+)
 def replace_clinic_day(
     clinic_id: str,
-    business_date: date,
-    payload: BillingLogRequest,
+    business_date: str,
     http_request: Request,
+    payload: BillingLogRequest = Depends(parse_billing_log_request),
     session: Session = Depends(get_db),
 ) -> ClinicDayResponse:
     settings = http_request.app.state.settings
+    parsed_clinic_id = clean_user_string(clinic_id, field="clinic_id", max_length=MAX_CLINIC_ID_LENGTH)
+    parsed_business_date = parse_business_date(business_date)
     logger.info(
         "clinic_days.replace start request_id=%s clinic_id=%s business_date=%s records=%s clinic_name_present=%s clinic_location_present=%s",
         getattr(http_request.state, "request_id", None),
-        clinic_id,
-        business_date,
+        parsed_clinic_id,
+        parsed_business_date,
         len(payload.records),
         payload.clinic_name is not None,
         payload.clinic_location is not None,
@@ -73,17 +129,24 @@ def replace_clinic_day(
     clinic_day, operation = IngestionService(
         session,
         max_records=settings.max_records_per_request,
+        max_line_items=settings.max_line_items_per_record,
+        max_issues_per_row=settings.max_issues_per_row,
+        max_issues_per_request=settings.max_issues_per_request,
+        max_persisted_issues=settings.max_persisted_issues_per_report,
+        max_medicine_warnings=settings.max_medicine_warnings_per_report,
+        max_medicine_comparisons=settings.max_medicine_comparisons_per_report,
+        max_safe_paise=settings.max_safe_paise,
         store_rejected_raw_rows=settings.store_rejected_raw_rows,
     ).replace_clinic_day(
-        clinic_id=clinic_id,
-        business_date=business_date,
+        clinic_id=parsed_clinic_id,
+        business_date=parsed_business_date,
         request=payload,
     )
     logger.info(
         "clinic_days.replace success request_id=%s clinic_id=%s business_date=%s operation=%s status=%s accepted=%s rejected=%s",
         getattr(http_request.state, "request_id", None),
-        clinic_id,
-        business_date,
+        parsed_clinic_id,
+        parsed_business_date,
         operation,
         clinic_day.status,
         clinic_day.accepted_rows,

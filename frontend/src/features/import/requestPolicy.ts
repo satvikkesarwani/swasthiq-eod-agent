@@ -1,7 +1,8 @@
 import { BACKEND_REQUEST_LIMIT_BYTES } from "./constants";
+import { stringifySafeJson } from "./jsonSafety";
 
 export function estimateBillingRequestBytes(payload: unknown): number {
-  return new TextEncoder().encode(JSON.stringify(payload)).byteLength;
+  return new TextEncoder().encode(stringifySafeJson(payload)).byteLength;
 }
 
 export function isEstimatedRequestTooLarge(payload: unknown): boolean {

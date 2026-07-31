@@ -5,16 +5,18 @@ import { analyticsReport, healthyResponse, makeClinicDayReport, recentReportsRes
 import { renderApp } from "../test/renderWithRouter";
 
 vi.mock("../api/endpoints", () => {
-  return { getHealth: vi.fn(), listClinicDays: vi.fn(), getClinicDay: vi.fn() };
+  return { getHealth: vi.fn(), listClinicDays: vi.fn(), getClinicDay: vi.fn(), getNarrative: vi.fn(), generateNarrative: vi.fn() };
 });
 
 describe("application shell and routes", () => {
   beforeEach(async () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
-    const { getHealth, listClinicDays, getClinicDay } = await import("../api/endpoints");
+    const { getHealth, listClinicDays, getClinicDay, getNarrative, generateNarrative } = await import("../api/endpoints");
     vi.mocked(getHealth).mockResolvedValue(healthyResponse);
     vi.mocked(listClinicDays).mockResolvedValue(recentReportsResponse);
     vi.mocked(getClinicDay).mockResolvedValue(makeClinicDayReport());
+    vi.mocked(getNarrative).mockRejectedValue({ status: 404, code: "NARRATIVE_NOT_GENERATED", requestId: null });
+    vi.mocked(generateNarrative).mockRejectedValue(new Error("not used"));
   });
 
   it("renders reports home with persistent navigation and topbar status", async () => {
@@ -31,7 +33,7 @@ describe("application shell and routes", () => {
   it("renders guarded report detail pages when params are valid", async () => {
     const { getClinicDay } = await import("../api/endpoints");
     vi.mocked(getClinicDay).mockResolvedValueOnce(analyticsReport);
-    renderApp("/reports/clinic-a/2026-07-31/analytics");
+    renderApp("/reports/CLN-TST-001/2026-07-31/analytics");
 
     expect(await screen.findByRole("heading", { name: "EOD Analytics" })).toBeVisible();
     expect(screen.getByLabelText("Analytics report context")).toHaveTextContent("CLN-TST-001");
@@ -40,15 +42,15 @@ describe("application shell and routes", () => {
   });
 
   it("renders the narrative placeholder without fabricated content", async () => {
-    renderApp("/reports/clinic-a/2026-07-31/narrative");
+    renderApp("/reports/CLN-TST-001/2026-07-31/narrative");
 
-    expect(screen.getByRole("heading", { name: "Narrative" })).toBeVisible();
-    expect(screen.getByText("Narrative not generated")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "AI Narrative Summary" })).toBeVisible();
+    expect(screen.getAllByRole("button", { name: "Generate Summary" })[0]).toBeVisible();
     await waitFor(() => expect(screen.getByText("Backend online")).toBeVisible());
   });
 
   it("shows guard state for invalid report params", async () => {
-    renderApp("/reports/clinic-a/not-a-date/reconciliation");
+    renderApp("/reports/CLN-TST-001/not-a-date/reconciliation");
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Report context unavailable");
     expect(screen.getByRole("link", { name: "Back to Reports" })).toHaveAttribute("href", "/reports");

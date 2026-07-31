@@ -21,8 +21,13 @@ def classify_day(*, clinic_day: Any) -> tuple[DayType, frozenset[DayFlag]]:
     report = clinic_day.report_json
     reconciliation = report["reconciliation"]
     analytics = report["analytics"]
-    has_sales = reconciliation["total_billed_paise"] > 0
-    has_refunds = reconciliation["refund_visit_count"] > 0 and reconciliation["total_refunds_paise"] > 0
+    activity_counts = report.get("activity_counts")
+    if isinstance(activity_counts, dict):
+        has_sales = activity_counts.get("sale_visit_count", 0) > 0 or activity_counts.get("sale_line_item_count", 0) > 0
+        has_refunds = activity_counts.get("refund_visit_count", reconciliation.get("refund_visit_count", 0)) > 0
+    else:
+        has_sales = reconciliation["total_billed_paise"] > 0
+        has_refunds = reconciliation["refund_visit_count"] > 0 and reconciliation["total_refunds_paise"] > 0
 
     if not has_sales and not has_refunds:
         day_type = DayType.EMPTY

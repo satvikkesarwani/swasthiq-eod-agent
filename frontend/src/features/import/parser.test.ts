@@ -19,6 +19,8 @@ describe("parseBillingLogFile", () => {
 
   it("rejects invalid JSON and non-array roots safely", async () => {
     await expect(parseBillingLogFile(jsonFile("{"))).rejects.toMatchObject({ code: "INVALID_JSON" });
+    await expect(parseBillingLogFile(jsonFile('[{"a":1,"a":2}]'))).rejects.toMatchObject({ code: "INVALID_JSON" });
+    await expect(parseBillingLogFile(jsonFile(`[{"amount_paid_paise":${Number.MAX_SAFE_INTEGER + 1}}]`))).rejects.toMatchObject({ code: "INVALID_JSON" });
     await expect(parseBillingLogFile(jsonFile("{}"))).rejects.toMatchObject({ code: "ROOT_NOT_ARRAY" });
     await expect(parseBillingLogFile(jsonFile("\"x\""))).rejects.toMatchObject({ code: "ROOT_NOT_ARRAY" });
     await expect(parseBillingLogFile(jsonFile("null"))).rejects.toMatchObject({ code: "ROOT_NOT_ARRAY" });
@@ -26,7 +28,8 @@ describe("parseBillingLogFile", () => {
 
   it("handles empty text and file read failures", async () => {
     await expect(parseBillingLogFile(jsonFile(""))).rejects.toBeInstanceOf(BillingFileParseError);
-    const file = { name: "billing.json", size: 2, text: vi.fn().mockRejectedValue(new Error("blocked")) } as unknown as File;
+    await expect(parseBillingLogFile(new File([new Uint8Array([0xff])], "billing.json", { type: "application/json" }))).rejects.toMatchObject({ code: "FILE_READ_FAILED" });
+    const file = { name: "billing.json", size: 2, arrayBuffer: vi.fn().mockRejectedValue(new Error("blocked")) } as unknown as File;
     await expect(parseBillingLogFile(file)).rejects.toMatchObject({ code: "FILE_READ_FAILED" });
   });
 });

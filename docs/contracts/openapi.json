@@ -1,7 +1,41 @@
 {
   "components": {
     "schemas": {
+      "ActivityCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_visit_count": {
+            "minimum": 0.0,
+            "title": "Accepted Visit Count",
+            "type": "integer"
+          },
+          "refund_visit_count": {
+            "minimum": 0.0,
+            "title": "Refund Visit Count",
+            "type": "integer"
+          },
+          "sale_line_item_count": {
+            "minimum": 0.0,
+            "title": "Sale Line Item Count",
+            "type": "integer"
+          },
+          "sale_visit_count": {
+            "minimum": 0.0,
+            "title": "Sale Visit Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted_visit_count",
+          "sale_visit_count",
+          "refund_visit_count",
+          "sale_line_item_count"
+        ],
+        "title": "ActivityCounts",
+        "type": "object"
+      },
       "AnalyticsReport": {
+        "additionalProperties": false,
         "properties": {
           "peak_hour": {
             "anyOf": [
@@ -42,49 +76,6 @@
           "top_medicines_by_revenue"
         ],
         "title": "AnalyticsReport",
-        "type": "object"
-      },
-      "BillingLogRequest": {
-        "properties": {
-          "clinic_location": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional clinic location.",
-            "title": "Clinic Location"
-          },
-          "clinic_name": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional clinic display name.",
-            "title": "Clinic Name"
-          },
-          "records": {
-            "description": "Submitted clinic-day billing rows. May be empty for a valid no-activity day.",
-            "items": {},
-            "title": "Records",
-            "type": "array"
-          }
-        },
-        "required": [
-          "records"
-        ],
-        "title": "BillingLogRequest",
         "type": "object"
       },
       "ClinicDayListItem": {
@@ -295,6 +286,7 @@
         "type": "object"
       },
       "DataQualityWarning": {
+        "additionalProperties": false,
         "properties": {
           "code": {
             "title": "Code",
@@ -318,7 +310,11 @@
         "type": "object"
       },
       "DeterministicReport": {
+        "additionalProperties": false,
         "properties": {
+          "activity_counts": {
+            "$ref": "#/components/schemas/ActivityCounts"
+          },
           "analytics": {
             "$ref": "#/components/schemas/AnalyticsReport"
           },
@@ -334,6 +330,7 @@
           }
         },
         "required": [
+          "activity_counts",
           "reconciliation",
           "analytics",
           "data_quality_warnings"
@@ -436,6 +433,7 @@
         "type": "object"
       },
       "HourlyRevenue": {
+        "additionalProperties": false,
         "properties": {
           "hour_utc": {
             "maximum": 23.0,
@@ -556,12 +554,27 @@
             "title": "Errors",
             "type": "array"
           },
+          "issues_truncated": {
+            "default": false,
+            "title": "Issues Truncated",
+            "type": "boolean"
+          },
           "received_rows": {
             "title": "Received Rows",
             "type": "integer"
           },
           "rejected_rows": {
             "title": "Rejected Rows",
+            "type": "integer"
+          },
+          "returned_issue_count": {
+            "default": 0,
+            "title": "Returned Issue Count",
+            "type": "integer"
+          },
+          "total_issue_count": {
+            "default": 0,
+            "title": "Total Issue Count",
             "type": "integer"
           }
         },
@@ -574,6 +587,7 @@
         "type": "object"
       },
       "MedicineQuantityRanking": {
+        "additionalProperties": false,
         "properties": {
           "drug_name": {
             "title": "Drug Name",
@@ -597,6 +611,7 @@
         "type": "object"
       },
       "MedicineRevenueRanking": {
+        "additionalProperties": false,
         "properties": {
           "drug_name": {
             "title": "Drug Name",
@@ -714,6 +729,7 @@
         "type": "object"
       },
       "PaymentModeMetrics": {
+        "additionalProperties": false,
         "properties": {
           "billed_paise": {
             "default": 0,
@@ -740,6 +756,7 @@
         "type": "object"
       },
       "PeakHour": {
+        "additionalProperties": false,
         "properties": {
           "end_hour_utc": {
             "title": "End Hour Utc",
@@ -763,6 +780,7 @@
         "type": "object"
       },
       "ReconciliationReport": {
+        "additionalProperties": false,
         "properties": {
           "by_payment_mode": {
             "additionalProperties": {
@@ -781,6 +799,17 @@
               }
             ],
             "title": "Collection Rate"
+          },
+          "collection_rate_basis_points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Rate Basis Points"
           },
           "pending_visit_count": {
             "title": "Pending Visit Count",
@@ -1091,7 +1120,6 @@
             "name": "business_date",
             "required": true,
             "schema": {
-              "format": "date",
               "title": "Business Date",
               "type": "string"
             }
@@ -1101,7 +1129,27 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BillingLogRequest"
+                "additionalProperties": false,
+                "properties": {
+                  "clinic_location": {
+                    "maxLength": 300,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "clinic_name": {
+                    "maxLength": 200,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "records": {
+                    "items": {},
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "records"
+                ],
+                "type": "object"
               }
             }
           },

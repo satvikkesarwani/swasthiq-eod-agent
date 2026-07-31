@@ -7,6 +7,15 @@ function hourLabel(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function activityCounts(report: ClinicDayDetail) {
+  return report.report.activity_counts ?? {
+    accepted_visit_count: report.ingestion.accepted_rows,
+    sale_visit_count: report.report.reconciliation.total_billed_paise > 0 ? Math.max(1, report.ingestion.accepted_rows - report.report.reconciliation.refund_visit_count) : 0,
+    refund_visit_count: report.report.reconciliation.refund_visit_count,
+    sale_line_item_count: report.report.reconciliation.total_billed_paise > 0 ? 1 : 0,
+  };
+}
+
 export function formatUtcHourRange(startHour: number, endHour: number): string {
   return `${hourLabel(startHour)}-${hourLabel(endHour)} UTC`;
 }
@@ -57,7 +66,7 @@ export function mapHourlyRevenue(report: ClinicDayDetail): HourRevenuePoint[] {
 }
 
 export function getAnalyticsContext(report: ClinicDayDetail): AnalyticsContext {
-  const reconciliation = report.report.reconciliation;
+  const activity = activityCounts(report);
   if (report.ingestion.rejected_rows > 0 && report.ingestion.accepted_rows > 0) {
     logDiagnostic("info", "analytics.presentation", "Analytics context partial", {
       receivedRows: report.ingestion.received_rows,
@@ -70,33 +79,31 @@ export function getAnalyticsContext(report: ClinicDayDetail): AnalyticsContext {
       message: `${formatCount(report.ingestion.accepted_rows)} accepted rows are included. ${formatCount(report.ingestion.rejected_rows)} rejected rows do not contribute to charts or rankings.`,
     };
   }
-  if (report.ingestion.received_rows === 0 && reconciliation.total_billed_paise === 0 && reconciliation.total_refunds_paise === 0) {
+  if (report.ingestion.received_rows === 0 && activity.accepted_visit_count === 0) {
     logDiagnostic("warn", "analytics.presentation", "Analytics context empty day", {
       clinicId: report.clinic_id,
       businessDate: report.business_date,
       receivedRows: report.ingestion.received_rows,
       acceptedRows: report.ingestion.accepted_rows,
-      totalBilledPaise: reconciliation.total_billed_paise,
-      totalRefundsPaise: reconciliation.total_refunds_paise,
     });
     return { kind: "empty", title: "No billing activity", message: "No billing activity was recorded for this clinic day." };
   }
-  if (reconciliation.total_billed_paise === 0 && reconciliation.total_refunds_paise > 0) {
+  if (activity.sale_visit_count === 0 && activity.refund_visit_count > 0) {
     logDiagnostic("info", "analytics.presentation", "Analytics context refund only", {
-      totalRefundsPaise: reconciliation.total_refunds_paise,
+      refundVisitCount: activity.refund_visit_count,
     });
     return { kind: "refund_only", title: "Refund-only day", message: "No new sales were recorded. Refund activity is available in Reconciliation." };
   }
-  if (reconciliation.total_billed_paise > 0 && reconciliation.total_refunds_paise > 0) {
+  if (activity.sale_visit_count > 0 && activity.refund_visit_count > 0) {
     logDiagnostic("info", "analytics.presentation", "Analytics context sales and refunds", {
-      totalBilledPaise: reconciliation.total_billed_paise,
-      totalRefundsPaise: reconciliation.total_refunds_paise,
+      saleVisitCount: activity.sale_visit_count,
+      refundVisitCount: activity.refund_visit_count,
     });
     return { kind: "sales_and_refunds", title: "Sales analytics exclude refund entries", message: "Refund totals remain available in Reconciliation." };
   }
-  if (reconciliation.total_billed_paise > 0) {
+  if (activity.sale_visit_count > 0) {
     logDiagnostic("info", "analytics.presentation", "Analytics context sales", {
-      totalBilledPaise: reconciliation.total_billed_paise,
+      saleVisitCount: activity.sale_visit_count,
     });
     return { kind: "sales", title: "Sales analytics loaded", message: "Charts and rankings use accepted non-refund sales from the deterministic report." };
   }
@@ -104,8 +111,8 @@ export function getAnalyticsContext(report: ClinicDayDetail): AnalyticsContext {
     receivedRows: report.ingestion.received_rows,
     acceptedRows: report.ingestion.accepted_rows,
     rejectedRows: report.ingestion.rejected_rows,
-    totalBilledPaise: reconciliation.total_billed_paise,
-    totalRefundsPaise: reconciliation.total_refunds_paise,
+    saleVisitCount: activity.sale_visit_count,
+    refundVisitCount: activity.refund_visit_count,
   });
   return { kind: "no_sales", title: "No accepted sales analytics", message: "No accepted sales rows were available for analytics." };
 }

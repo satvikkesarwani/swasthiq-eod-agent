@@ -5,6 +5,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from app.api.routes_clinic_days import router as clinic_days_router
@@ -15,8 +16,10 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging, get_logger
 from app.core.rate_limit import FixedWindowRateLimiter
 from app.core.request_context import reset_request_id, set_request_id
+from app.core.safe_strings import safe_error_code, safe_error_message, safe_field_path
 from app.db.session import Base, build_engine, build_session_factory
 from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledNarrativeProvider
+from app.schemas.ingestion import BillingLogRequest
 
 logger = get_logger(__name__)
 
@@ -228,17 +231,17 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     async def request_validation_handler(request: Request, exc: RequestValidationError):
         details = [
             {
-                "field": ".".join(str(part) for part in error["loc"]),
-                "code": error["type"],
-                "message": error["msg"],
+                "field": safe_field_path(".".join(str(part) for part in error["loc"])),
+                "code": safe_error_code(error["type"]),
+                "message": safe_error_message(error["msg"]),
             }
             for error in exc.errors()
         ]
         logger.warning(
-            "request.validation_error request_id=%s path=%s details=%s",
+            "request.validation_error request_id=%s path=%s details_count=%s",
             getattr(request.state, "request_id", None),
             request.url.path,
-            details,
+            len(details),
         )
         return JSONResponse(
             status_code=422,
@@ -273,6 +276,21 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     app.include_router(health_router, prefix=api_prefix)
     app.include_router(clinic_days_router, prefix=api_prefix)
     app.include_router(narratives_router, prefix=api_prefix)
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        openapi_schema.setdefault("components", {}).setdefault("schemas", {})["BillingLogRequest"] = BillingLogRequest.model_json_schema(ref_template="#/components/schemas/{model}")
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
     return app
 
 

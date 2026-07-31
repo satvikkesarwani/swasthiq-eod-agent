@@ -1,4 +1,5 @@
 import { apiUrl, requestJson, type ApiRequestOptions } from "./client";
+import { validateApiPayload } from "./runtimeValidation";
 import type {
   BillingLogRequest,
   ClinicDayDetail,
@@ -32,7 +33,7 @@ export function healthUrl(): string {
 }
 
 export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
-  return requestJson<HealthResponse>("/health", requestOptions(signal));
+  return requestJson<HealthResponse>("/health", requestOptions(signal)).then(validateApiPayload);
 }
 
 export function listClinicDays(params: {
@@ -48,11 +49,11 @@ export function listClinicDays(params: {
   appendOptional(query, "date_to", params.dateTo);
   appendOptional(query, "limit", params.limit);
   appendOptional(query, "offset", params.offset);
-  return requestJson<ClinicDayListResponse>(`/clinic-days${query.size ? `?${query.toString()}` : ""}`, requestOptions(signal));
+  return requestJson<ClinicDayListResponse>(`/clinic-days${query.size ? `?${query.toString()}` : ""}`, requestOptions(signal)).then(validateApiPayload);
 }
 
 export function getClinicDay(clinicId: string, businessDate: string, signal?: AbortSignal): Promise<ClinicDayDetail> {
-  return requestJson<ClinicDayDetail>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}`, requestOptions(signal));
+  return requestJson<ClinicDayDetail>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}`, requestOptions(signal)).then(validateApiPayload);
 }
 
 export function putClinicDay(
@@ -61,7 +62,7 @@ export function putClinicDay(
   input: BillingLogRequest,
   signal?: AbortSignal,
 ): Promise<ClinicDayDetail> {
-  return requestJson<ClinicDayDetail>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}`, requestOptions(signal, "PUT", input));
+  return requestJson<ClinicDayDetail>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}`, requestOptions(signal, "PUT", input)).then(validateApiPayload);
 }
 
 export function getClinicDayErrors(
@@ -76,11 +77,11 @@ export function getClinicDayErrors(
   return requestJson<IngestionIssueListResponse>(
     `/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}/errors${query.size ? `?${query.toString()}` : ""}`,
     requestOptions(signal),
-  );
+  ).then(validateApiPayload);
 }
 
 export function getNarrative(clinicId: string, businessDate: string, signal?: AbortSignal): Promise<NarrativeResponse> {
-  return requestJson<NarrativeResponse>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}/narrative`, requestOptions(signal));
+  return requestJson<NarrativeResponse>(`/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}/narrative`, requestOptions(signal)).then(validateApiPayload);
 }
 
 export function generateNarrative(
@@ -92,5 +93,5 @@ export function generateNarrative(
   return requestJson<NarrativeResponse>(
     `/clinic-days/${encoded(clinicId)}/${encoded(businessDate)}/narrative`,
     requestOptions(signal, "POST", input),
-  );
+  ).then(validateApiPayload);
 }
