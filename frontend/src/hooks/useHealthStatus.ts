@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { API_OK_EVENT } from "../api/client";
 import { getHealth } from "../api/endpoints";
 import { useOnlineStatus } from "./useOnlineStatus";
 
@@ -78,11 +79,16 @@ export function useHealthStatus(): HealthStatus {
     const onOnline = () => {
       void check();
     };
+    const onApiOk = () => {
+      failures.current = 0;
+      setStatus({ state: "healthy", label: labelFor("healthy"), checkedAt: new Date() });
+    };
     const interval = window.setInterval(() => {
       void check();
     }, CHECK_INTERVAL_MS);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onOnline);
+    window.addEventListener(API_OK_EVENT, onApiOk);
 
     return () => {
       controller.abort();
@@ -92,6 +98,7 @@ export function useHealthStatus(): HealthStatus {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener(API_OK_EVENT, onApiOk);
     };
   }, [online]);
 

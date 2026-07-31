@@ -1,6 +1,7 @@
 import type { ApiErrorPayload } from "./types";
 
 const API_PREFIX = "/api/v1";
+export const API_OK_EVENT = "swasthiq:api-ok";
 
 export type ApiRequestOptions = {
   method?: "GET" | "POST" | "PUT";
@@ -136,6 +137,9 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
   const payload = await parseJson(response);
   if (!response.ok) {
     throw toApiError(payload, response.status, requestId);
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(API_OK_EVENT));
   }
   return payload as T;
 }
