@@ -53,7 +53,7 @@ export function RecentReportsFilters({ query }: RecentReportsFiltersProps) {
           <label htmlFor="recent-to">Date to</label>
           <input id="recent-to" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
         </div>
-        <div className={styles.filters}>
+        <div className={styles.filterActions}>
           <Button type="submit" variant="secondary">Apply filters</Button>
           <Button type="button" variant="ghost" onClick={reset}>Reset</Button>
         </div>

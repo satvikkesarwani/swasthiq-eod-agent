@@ -14,7 +14,8 @@ Implementation workspace for a Python REST API and React interface that converts
 - Prompt 6: Billing-log import, validation issues, recent reports, filters, pagination, and report-opening workflow finalized.
 - Pre-coding package for Steps 4–7: complete.
 - Prompt 7: Production EOD Reconciliation Dashboard finalized with backend-authoritative KPI cards, payment-mode breakdown, collection health, issue access, empty/refund states, and safe error handling.
-- Remaining coding: analytics screen, AI narrative screen, CI, deployment, and production hardening outside Prompt 7 scope.
+- Prompt 8: Production Analytics Dashboard finalized with backend-authoritative revenue-by-hour chart, peak hour, medicine rankings, warning states, and safe error handling.
+- Remaining coding: AI narrative screen, CI, deployment, and production hardening outside Prompt 8 scope.
 
 ## Locked stack
 
@@ -70,6 +71,8 @@ Prompt 5 frontend foundation details are recorded in [`docs/implementation/05_FR
 Prompt 6 import and recent-report workflow details are recorded in [`docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md`](docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md).
 
 Prompt 7 reconciliation dashboard details are recorded in [`docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md`](docs/implementation/07_RECONCILIATION_DASHBOARD_REPORT.md).
+
+Prompt 8 analytics dashboard details are recorded in [`docs/implementation/08_ANALYTICS_DASHBOARD_REPORT.md`](docs/implementation/08_ANALYTICS_DASHBOARD_REPORT.md).
 
 ## Frontend verification
 
@@ -130,6 +133,30 @@ flowchart TD
 ```
 
 The page handles normal sales days, outstanding balances, partial imports, valid empty days, refund-only days, sales-and-refunds days, backend warnings, 404 report-not-found responses, and safe retryable API failures.
+
+## Analytics dashboard
+
+The analytics route loads the same canonical clinic-day detail response from:
+
+```text
+GET /api/v1/clinic-days/{clinic_id}/{business_date}
+```
+
+React displays backend analytics values only. It maps hourly buckets into a Recharts bar chart and semantic table without filtering, aggregating, filling, or reordering them. Peak hour highlighting comes only from backend `peak_hour`, and medicine ranking rows use backend `rank` and response order.
+
+```mermaid
+flowchart TD
+    A["Open analytics deep link"] --> B["React Router loader"]
+    B --> C["GET canonical clinic-day detail"]
+    C --> D["Header and report context"]
+    C --> E["Backend peak hour"]
+    C --> F["Revenue-by-hour chart and table"]
+    C --> G["Medicine rankings"]
+    C --> H["Warnings and report integrity"]
+    H --> I["Validation issues drawer on demand"]
+```
+
+The page handles normal sales days, partial imports, valid empty days, refund-only days, sales-and-refunds days, backend warnings, 404 report-not-found responses, malformed analytics responses, and safe retryable API failures.
 
 ## Database and Migrations
 

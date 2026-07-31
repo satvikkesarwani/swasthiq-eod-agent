@@ -1,40 +1,101 @@
-import { BarChart3 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useLoaderData, useNavigation } from "react-router";
 
-import { EmptyState } from "../components/feedback/EmptyState";
+import { narrativePath, reconciliationPath } from "../app/routes";
 import { PageContainer } from "../components/layout/PageContainer";
+import { Button } from "../components/primitives/Button";
 import { GlassPanel } from "../components/primitives/GlassPanel";
-import { StatusPill } from "../components/primitives/StatusPill";
-import { ReportContextBar } from "../components/report/ReportContextBar";
-import { ReportRouteGuard } from "../components/report/ReportRouteGuard";
+import { AnalyticsContextBanner } from "../features/analytics/components/AnalyticsContextBanner";
+import { AnalyticsDefinitionsPanel } from "../features/analytics/components/AnalyticsDefinitionsPanel";
+import { AnalyticsLoadError, AnalyticsNotFound } from "../features/analytics/components/AnalyticsErrorState";
+import { AnalyticsHeader } from "../features/analytics/components/AnalyticsHeader";
+import { AnalyticsSkeleton } from "../features/analytics/components/AnalyticsSkeleton";
+import { AnalyticsWarnings } from "../features/analytics/components/AnalyticsWarnings";
+import { MedicineRankingPanel } from "../features/analytics/components/MedicineRankingPanel";
+import { PeakHourCard } from "../features/analytics/components/PeakHourCard";
+import { RevenueByHourPanel } from "../features/analytics/components/RevenueByHourPanel";
+import type { AnalyticsLoaderData } from "../features/analytics/types";
+import { ValidationIssuesDrawer } from "../features/import/components/ValidationIssuesDrawer";
+import type { ImportResult } from "../features/import/types";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import styles from "./Page.module.css";
+import styles from "../features/analytics/analytics.module.css";
 
 export function AnalyticsPage() {
-  useDocumentTitle("Analytics");
+  const loaderData = useLoaderData<AnalyticsLoaderData>();
+  const navigation = useNavigation();
+  const [issuesOpen, setIssuesOpen] = useState(false);
+  const report = loaderData.state === "ready" ? loaderData.report : null;
+  const issueResult: ImportResult | null = useMemo(() => {
+    if (!report) {
+      return null;
+    }
+    return {
+      clinicId: report.clinic_id,
+      businessDate: report.business_date,
+      status: report.status,
+      operation: report.operation ?? "loaded",
+      receivedRows: report.ingestion.received_rows,
+      acceptedRows: report.ingestion.accepted_rows,
+      rejectedRows: report.ingestion.rejected_rows,
+      reportHash: report.report_hash,
+      warnings: report.report.data_quality_warnings.map((warning) => warning.message),
+      response: report,
+    };
+  }, [report]);
+
+  useDocumentTitle(loaderData.state === "ready" ? "EOD Analytics" : "Analytics unavailable");
+
+  if (navigation.state === "loading" && loaderData.state !== "ready") {
+    return <AnalyticsSkeleton />;
+  }
+
+  if (loaderData.state === "not_found") {
+    return (
+      <PageContainer eyebrow="Operational analytics" title="Report not found" description="Import a billing log to create this clinic-day report.">
+        <AnalyticsNotFound data={loaderData} />
+      </PageContainer>
+    );
+  }
+
+  if (loaderData.state === "error") {
+    return (
+      <PageContainer eyebrow="Operational analytics" title="Analytics unavailable" description="The application shell is still available.">
+        <AnalyticsLoadError data={loaderData} />
+      </PageContainer>
+    );
+  }
+
+  if (!report) {
+    return null;
+  }
 
   return (
-    <ReportRouteGuard>
-      <ReportContextBar section="Analytics" />
-      <PageContainer
-        eyebrow="Operational analytics"
-        title="Analytics"
-        description="Reserved space for contract-backed charts and validation cards."
-      >
-        <div className={styles.twoColumn}>
-          <GlassPanel title="Charts" description="Recharts is installed for later contract-backed analytics.">
-            <EmptyState
-              title="Charts pending data"
-              message="The frontend shell includes the chart dependency, but this prompt intentionally avoids rendering made-up values."
-            />
-          </GlassPanel>
-          <GlassPanel title="Runtime" compact>
-            <ul className={styles.contractList}>
-              <li><span><BarChart3 size={16} aria-hidden="true" /> Chart engine</span><StatusPill tone="healthy">Installed</StatusPill></li>
-              <li><span>Financial data</span><StatusPill tone="fallback">Not mocked</StatusPill></li>
-            </ul>
+    <>
+      <div className={styles.page} aria-busy={navigation.state === "loading" ? "true" : undefined}>
+        <AnalyticsHeader report={report} />
+        <AnalyticsContextBanner report={report} />
+        <div className={styles.summaryGrid}>
+          <PeakHourCard report={report} />
+          <GlassPanel title="Data Quality Warnings" description="Non-blocking warnings generated by deterministic checks.">
+            <AnalyticsWarnings report={report} />
+            {report.ingestion.rejected_rows > 0 && (
+              <div className={styles.actions}>
+                <Button type="button" variant="secondary" onClick={() => setIssuesOpen(true)}>Review validation issues</Button>
+              </div>
+            )}
           </GlassPanel>
         </div>
-      </PageContainer>
-    </ReportRouteGuard>
+        <div className={styles.dashboardGrid}>
+          <RevenueByHourPanel report={report} />
+          <MedicineRankingPanel report={report} />
+        </div>
+        <AnalyticsDefinitionsPanel report={report} />
+        <nav className={styles.bottomNav} aria-label="Continue exploring report">
+          <Button to={reconciliationPath(report.clinic_id, report.business_date)} variant="primary">View Reconciliation</Button>
+          <Button to={narrativePath(report.clinic_id, report.business_date)} variant="secondary">View AI Summary</Button>
+        </nav>
+      </div>
+      <ValidationIssuesDrawer open={issuesOpen} result={issueResult} onClose={() => setIssuesOpen(false)} />
+    </>
   );
 }

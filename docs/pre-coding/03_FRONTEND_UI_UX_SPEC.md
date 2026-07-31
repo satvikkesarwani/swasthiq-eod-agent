@@ -209,11 +209,11 @@ Fields:
 ### Revenue chart
 
 - Recharts `BarChart`.
-- API supplies 24 hourly buckets.
-- UI displays the contiguous range from the first positive hour to the last positive hour; for the supplied normal day this naturally produces 9am–6pm as shown.
-- If all values are zero, show the no-sales state instead of meaningless bars.
-- Peak bar uses brand blue; others use a pale blue.
-- Peak callout contains hour label and exact money value.
+- API supplies hourly buckets.
+- UI displays the backend buckets in response order without filtering, filling, grouping, aggregating, or sorting.
+- If no buckets are returned, show the no-sales state instead of fabricating bars.
+- Peak bar is highlighted only when the bucket hour matches backend `peak_hour.start_hour_utc`.
+- Peak callout contains the backend hour label and exact money value.
 - Tooltip shows `UTC` explicitly.
 
 ### Medicine rankings

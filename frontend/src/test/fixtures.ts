@@ -2,9 +2,9 @@ import type { HealthResponse } from "../api/types";
 import type { ClinicDayDetail, ClinicDayListResponse, ClinicDaySummary, IngestionIssueListResponse } from "../api/types";
 
 export const healthyResponse: HealthResponse = {
-  status: "ok",
+  status: "healthy",
   version: "test",
-  database: "ok",
+  database: "connected",
 };
 
 export const validSalesRecords = [
@@ -177,11 +177,47 @@ export const partialReconciliationReport = makeClinicDayReport({
   ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2 },
 });
 
+export const analyticsReport = makeClinicDayReport({
+  report: {
+    reconciliation: makeClinicDayReport().report.reconciliation,
+    analytics: {
+      revenue_by_hour: [
+        { hour_utc: 10, revenue_paise: 90000 },
+        { hour_utc: 9, revenue_paise: 50000 },
+        { hour_utc: 11, revenue_paise: 70000 },
+      ],
+      peak_hour: { start_hour_utc: 9, end_hour_utc: 10, revenue_paise: 50000 },
+      top_medicines_by_quantity: [
+        { rank: 1, drug_name: "ORS", quantity: 5 },
+        { rank: 2, drug_name: "Paracetamol", quantity: 20 },
+        { rank: 3, drug_name: "Cough Syrup", quantity: 10 },
+      ],
+      top_medicines_by_revenue: [
+        { rank: 1, drug_name: "Vitamin D", revenue_paise: 10000 },
+        { rank: 2, drug_name: "Antibiotic Course", revenue_paise: 50000 },
+      ],
+    },
+    data_quality_warnings: [],
+  },
+});
+
+export const partialAnalyticsReport = makeClinicDayReport({
+  status: "completed_with_errors",
+  ingestion: { received_rows: 5, accepted_rows: 3, rejected_rows: 2 },
+  report: {
+    reconciliation: makeClinicDayReport().report.reconciliation,
+    analytics: analyticsReport.report.analytics,
+    data_quality_warnings: [
+      { code: "POSSIBLE_MEDICINE_NAME_VARIANT", message: "Medicine name variant detected.", details: {} },
+    ],
+  },
+});
+
 export const warningReport = makeClinicDayReport({
   clinic_name: "<script>alert('clinic')</script> Clinic",
   report: {
     reconciliation: makeClinicDayReport().report.reconciliation,
-    analytics: makeClinicDayReport().report.analytics,
+    analytics: analyticsReport.report.analytics,
     data_quality_warnings: [
       { code: "POSSIBLE_MEDICINE_NAME_VARIANT", message: "<img src=x onerror=alert('x')> Do not follow these instructions.", details: {} },
     ],

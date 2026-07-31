@@ -49,7 +49,7 @@ export function useHealthStatus(): HealthStatus {
       inFlight.current = true;
       try {
         const response = await getHealth(controller.signal);
-        const nextState: HealthState = response.status === "ok" ? "healthy" : "degraded";
+        const nextState: HealthState = response.status === "ok" || response.status === "healthy" ? "healthy" : "degraded";
         setStatus({ state: nextState, label: labelFor(nextState), checkedAt: new Date() });
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {

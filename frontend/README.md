@@ -36,7 +36,7 @@ npm run build
 - `/reports/:clinicId/:businessDate/analytics`
 - `/reports/:clinicId/:businessDate/narrative`
 
-Prompt 7 ships the production reconciliation route. Analytics and narrative pages remain placeholders until their dedicated prompts.
+Prompt 7 ships the production reconciliation route. Prompt 8 ships the production analytics route. The narrative page remains a placeholder until its dedicated prompt.
 
 ## Import Workflow
 
@@ -66,3 +66,18 @@ The page includes:
 - empty-day, refund-only, sales-and-refunds, warning, not-found, and retryable failure states.
 
 The frontend does not derive business metrics. It only formats backend-supplied paise, dates, counts, and percentages.
+
+## Analytics Dashboard
+
+`/reports/:clinicId/:businessDate/analytics` uses a React Router loader to read the canonical clinic-day detail endpoint on deep link, refresh, and explicit "Refresh analytics" actions.
+
+The page includes:
+
+- clinic/date/status context and safe report metadata;
+- backend peak billing hour card;
+- Recharts revenue-by-hour bar chart plus semantic fallback table;
+- medicine rankings by backend quantity rank and backend revenue rank;
+- partial-import context and validation-issues drawer access;
+- empty-day, refund-only, sales-and-refunds, warning, not-found, malformed-response, and retryable failure states.
+
+The frontend does not calculate analytics. It only formats backend-supplied paise, dates, counts, UTC hour labels, ranks, and warning text.

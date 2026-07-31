@@ -1,0 +1,339 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.header {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.headerTitle {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-teal);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: 0;
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.context dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.context dd {
+  margin: 0;
+}
+
+.actions,
+.bottomNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.contextBanner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: rgba(99, 216, 215, 0.1);
+  border: 1px solid rgba(99, 216, 215, 0.34);
+  border-radius: var(--radius-md);
+}
+
+.contextBanner.partial,
+.contextBanner.empty,
+.contextBanner.refund_only,
+.contextBanner.no_sales {
+  background: rgba(244, 200, 111, 0.1);
+  border-color: rgba(244, 200, 111, 0.34);
+}
+
+.contextBanner h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.muted,
+.contextBanner p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.chartWrap {
+  height: 20rem;
+  min-height: 20rem;
+}
+
+.tooltip {
+  padding: var(--space-3);
+  background: rgba(7, 18, 32, 0.96);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-soft);
+}
+
+.tooltip p {
+  margin: 0;
+}
+
+.tooltip strong {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+}
+
+.emptyChart {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.peakCard,
+.integrityItem {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.peakCard strong {
+  font-family: var(--font-mono);
+  font-size: 1.55rem;
+  line-height: 1.15;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  min-width: 38rem;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table caption {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.moneyCell,
+.rankValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.moneyCell {
+  text-align: right;
+}
+
+.rankingGrid,
+.warningList,
+.definitionList,
+.integrityGrid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rankingList,
+.warningList,
+.definitionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankingList {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rankingList li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.rankBadge {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  color: var(--color-teal);
+  font-family: var(--font-mono);
+  background: rgba(99, 216, 215, 0.1);
+  border: 1px solid rgba(99, 216, 215, 0.28);
+  border-radius: var(--radius-sm);
+}
+
+.medicineName {
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.warningList li {
+  padding: var(--space-3);
+  background: rgba(244, 200, 111, 0.08);
+  border: 1px solid rgba(244, 200, 111, 0.22);
+  border-radius: var(--radius-sm);
+}
+
+.definitionList dt {
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.definitionList dd {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.integrityGrid {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+}
+
+.integrityItem span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.integrityItem strong {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.errorPanel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.supportDetails {
+  color: var(--color-text-muted);
+}
+
+.supportDetails code {
+  color: var(--color-text);
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.skeletonBlock {
+  min-height: 8rem;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeletonBlock {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (min-width: 820px) {
+  .summaryGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.65fr);
+  }
+}
+
+@media (min-width: 1080px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dashboardGrid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(20rem, 0.65fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .actions,
+  .bottomNav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .contextBanner,
+  .peakCard {
+    padding: var(--space-4);
+  }
+}

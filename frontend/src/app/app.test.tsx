@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { healthyResponse, makeClinicDayReport, recentReportsResponse } from "../test/fixtures";
+import { analyticsReport, healthyResponse, makeClinicDayReport, recentReportsResponse } from "../test/fixtures";
 import { renderApp } from "../test/renderWithRouter";
 
 vi.mock("../api/endpoints", () => {
@@ -29,11 +29,13 @@ describe("application shell and routes", () => {
   });
 
   it("renders guarded report detail pages when params are valid", async () => {
+    const { getClinicDay } = await import("../api/endpoints");
+    vi.mocked(getClinicDay).mockResolvedValueOnce(analyticsReport);
     renderApp("/reports/clinic-a/2026-07-31/analytics");
 
-    expect(screen.getByRole("heading", { name: "Analytics" })).toBeVisible();
-    expect(screen.getByLabelText("Report context")).toHaveTextContent("clinic-a");
-    expect(screen.getByLabelText("Report context")).toHaveTextContent("2026-07-31");
+    expect(await screen.findByRole("heading", { name: "EOD Analytics" })).toBeVisible();
+    expect(screen.getByLabelText("Analytics report context")).toHaveTextContent("CLN-TST-001");
+    expect(screen.getByLabelText("Analytics report context")).toHaveTextContent("31 Jul 2026");
     await waitFor(() => expect(screen.getByText("Backend online")).toBeVisible());
   });
 

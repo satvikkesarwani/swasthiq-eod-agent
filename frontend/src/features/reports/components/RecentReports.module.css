@@ -23,6 +23,18 @@
   border-radius: var(--radius-sm);
 }
 
+.filterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.filterActions > * {
+  flex: 1 1 8rem;
+  white-space: nowrap;
+}
+
 .activeFilters {
   display: flex;
   flex-wrap: wrap;
@@ -100,5 +112,12 @@
 
   .moneyGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
