@@ -42,3 +42,5 @@ class NarrativeResponse(BaseModel):
     report_hash: str
     provider: str | None = None
     model: str | None = None
+    generation_ms: int | None = None
+    fallback_reason_code: str | None = None

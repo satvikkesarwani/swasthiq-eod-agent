@@ -24,12 +24,25 @@ class ClinicDayRepository:
             )
         return self.session.scalar(statement)
 
-    def list_all(self, clinic_id: str | None = None) -> list[ClinicDay]:
+    def list_all(
+        self,
+        *,
+        clinic_id: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[ClinicDay]:
         statement = select(ClinicDay).options(selectinload(ClinicDay.narrative)).order_by(
-            ClinicDay.business_date.desc(), ClinicDay.updated_at.desc()
+            ClinicDay.business_date.desc(), ClinicDay.updated_at.desc(), ClinicDay.id.asc()
         )
         if clinic_id:
             statement = statement.where(ClinicDay.clinic_id == clinic_id)
+        if date_from:
+            statement = statement.where(ClinicDay.business_date >= date_from)
+        if date_to:
+            statement = statement.where(ClinicDay.business_date <= date_to)
+        statement = statement.limit(limit).offset(offset)
         return list(self.session.scalars(statement).all())
 
     def replace(
@@ -48,7 +61,7 @@ class ClinicDayRepository:
         source_hash: str,
         report_hash: str,
         report_json: dict[str, Any],
-    ) -> tuple[ClinicDay, bool]:
+    ) -> tuple[ClinicDay, str]:
         clinic_day = self.get(clinic_id, business_date, with_children=True)
         created = clinic_day is None
         if clinic_day is None:
@@ -67,8 +80,10 @@ class ClinicDayRepository:
             )
             self.session.add(clinic_day)
             self.session.flush()
+            operation = "created"
         else:
             previous_hash = clinic_day.report_hash
+            previous_source_hash = clinic_day.source_hash
             clinic_day.clinic_name = clinic_name
             clinic_day.clinic_location = clinic_location
             clinic_day.status = status
@@ -84,6 +99,7 @@ class ClinicDayRepository:
                 self.session.delete(clinic_day.narrative)
                 clinic_day.narrative = None
             self.session.flush()
+            operation = "unchanged" if previous_hash == report_hash and previous_source_hash == source_hash else "replaced"
 
         for accepted_visit in accepted:
             visit_model = Visit(
@@ -116,11 +132,11 @@ class ClinicDayRepository:
                     row_index=issue.row_index,
                     visit_id=issue.visit_id,
                     field_path=issue.field,
-                    code=issue.code,
+                    error_code=issue.code,
                     message=issue.message,
                     raw_row_json=issue.raw_row if store_rejected_raw_rows else None,
                 )
             )
 
         self.session.flush()
-        return clinic_day, created
+        return clinic_day, operation

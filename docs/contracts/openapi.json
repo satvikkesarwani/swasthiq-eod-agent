@@ -1,0 +1,1477 @@
+{
+  "components": {
+    "schemas": {
+      "AnalyticsReport": {
+        "properties": {
+          "peak_hour": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeakHour"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revenue_by_hour": {
+            "items": {
+              "$ref": "#/components/schemas/HourlyRevenue"
+            },
+            "title": "Revenue By Hour",
+            "type": "array"
+          },
+          "top_medicines_by_quantity": {
+            "items": {
+              "$ref": "#/components/schemas/MedicineQuantityRanking"
+            },
+            "title": "Top Medicines By Quantity",
+            "type": "array"
+          },
+          "top_medicines_by_revenue": {
+            "items": {
+              "$ref": "#/components/schemas/MedicineRevenueRanking"
+            },
+            "title": "Top Medicines By Revenue",
+            "type": "array"
+          }
+        },
+        "required": [
+          "revenue_by_hour",
+          "peak_hour",
+          "top_medicines_by_quantity",
+          "top_medicines_by_revenue"
+        ],
+        "title": "AnalyticsReport",
+        "type": "object"
+      },
+      "BillingLogRequest": {
+        "properties": {
+          "clinic_location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional clinic location.",
+            "title": "Clinic Location"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional clinic display name.",
+            "title": "Clinic Name"
+          },
+          "records": {
+            "description": "Submitted clinic-day billing rows. May be empty for a valid no-activity day.",
+            "items": {},
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "records"
+        ],
+        "title": "BillingLogRequest",
+        "type": "object"
+      },
+      "ClinicDayListItem": {
+        "properties": {
+          "accepted_rows": {
+            "title": "Accepted Rows",
+            "type": "integer"
+          },
+          "business_date": {
+            "format": "date",
+            "title": "Business Date",
+            "type": "string"
+          },
+          "clinic_id": {
+            "title": "Clinic Id",
+            "type": "string"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Name"
+          },
+          "narrative_status": {
+            "title": "Narrative Status",
+            "type": "string"
+          },
+          "rejected_rows": {
+            "title": "Rejected Rows",
+            "type": "integer"
+          },
+          "report_hash": {
+            "title": "Report Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_billed_paise": {
+            "title": "Total Billed Paise",
+            "type": "integer"
+          },
+          "total_collected_paise": {
+            "title": "Total Collected Paise",
+            "type": "integer"
+          },
+          "total_outstanding_paise": {
+            "title": "Total Outstanding Paise",
+            "type": "integer"
+          },
+          "total_refunds_paise": {
+            "title": "Total Refunds Paise",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinic_id",
+          "clinic_name",
+          "business_date",
+          "status",
+          "accepted_rows",
+          "rejected_rows",
+          "total_billed_paise",
+          "total_collected_paise",
+          "total_outstanding_paise",
+          "total_refunds_paise",
+          "report_hash",
+          "narrative_status",
+          "updated_at"
+        ],
+        "title": "ClinicDayListItem",
+        "type": "object"
+      },
+      "ClinicDayListResponse": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicDayListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "count"
+        ],
+        "title": "ClinicDayListResponse",
+        "type": "object"
+      },
+      "ClinicDayResponse": {
+        "properties": {
+          "business_date": {
+            "format": "date",
+            "title": "Business Date",
+            "type": "string"
+          },
+          "clinic_id": {
+            "title": "Clinic Id",
+            "type": "string"
+          },
+          "clinic_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Location"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "ingestion": {
+            "$ref": "#/components/schemas/IngestionSummary"
+          },
+          "narrative_status": {
+            "title": "Narrative Status",
+            "type": "string"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation"
+          },
+          "report": {
+            "$ref": "#/components/schemas/DeterministicReport"
+          },
+          "report_hash": {
+            "title": "Report Hash",
+            "type": "string"
+          },
+          "source_hash": {
+            "title": "Source Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinic_id",
+          "clinic_name",
+          "clinic_location",
+          "business_date",
+          "status",
+          "ingestion",
+          "report",
+          "source_hash",
+          "report_hash",
+          "narrative_status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClinicDayResponse",
+        "type": "object"
+      },
+      "DataQualityWarning": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "DataQualityWarning",
+        "type": "object"
+      },
+      "DeterministicReport": {
+        "properties": {
+          "analytics": {
+            "$ref": "#/components/schemas/AnalyticsReport"
+          },
+          "data_quality_warnings": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityWarning"
+            },
+            "title": "Data Quality Warnings",
+            "type": "array"
+          },
+          "reconciliation": {
+            "$ref": "#/components/schemas/ReconciliationReport"
+          }
+        },
+        "required": [
+          "reconciliation",
+          "analytics",
+          "data_quality_warnings"
+        ],
+        "title": "DeterministicReport",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "FigureTrace": {
+        "properties": {
+          "display_value": {
+            "title": "Display Value",
+            "type": "string"
+          },
+          "raw_value": {
+            "title": "Raw Value"
+          },
+          "report_path": {
+            "title": "Report Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_value",
+          "report_path",
+          "raw_value"
+        ],
+        "title": "FigureTrace",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "HourlyRevenue": {
+        "properties": {
+          "hour_utc": {
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Hour Utc",
+            "type": "integer"
+          },
+          "revenue_paise": {
+            "title": "Revenue Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hour_utc",
+          "revenue_paise"
+        ],
+        "title": "HourlyRevenue",
+        "type": "object"
+      },
+      "IngestionIssue": {
+        "properties": {
+          "error_code": {
+            "title": "Error Code",
+            "type": "string"
+          },
+          "field_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Path"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row_index": {
+            "title": "Row Index",
+            "type": "integer"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
+          }
+        },
+        "required": [
+          "row_index",
+          "error_code",
+          "message"
+        ],
+        "title": "IngestionIssue",
+        "type": "object"
+      },
+      "IngestionIssueListResponse": {
+        "properties": {
+          "business_date": {
+            "format": "date",
+            "title": "Business Date",
+            "type": "string"
+          },
+          "clinic_id": {
+            "title": "Clinic Id",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionIssue"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "clinic_id",
+          "business_date",
+          "count",
+          "limit",
+          "offset",
+          "errors"
+        ],
+        "title": "IngestionIssueListResponse",
+        "type": "object"
+      },
+      "IngestionSummary": {
+        "properties": {
+          "accepted_rows": {
+            "title": "Accepted Rows",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "received_rows": {
+            "title": "Received Rows",
+            "type": "integer"
+          },
+          "rejected_rows": {
+            "title": "Rejected Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "received_rows",
+          "accepted_rows",
+          "rejected_rows"
+        ],
+        "title": "IngestionSummary",
+        "type": "object"
+      },
+      "MedicineQuantityRanking": {
+        "properties": {
+          "drug_name": {
+            "title": "Drug Name",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rank",
+          "drug_name",
+          "quantity"
+        ],
+        "title": "MedicineQuantityRanking",
+        "type": "object"
+      },
+      "MedicineRevenueRanking": {
+        "properties": {
+          "drug_name": {
+            "title": "Drug Name",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "revenue_paise": {
+            "title": "Revenue Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rank",
+          "drug_name",
+          "revenue_paise"
+        ],
+        "title": "MedicineRevenueRanking",
+        "type": "object"
+      },
+      "NarrativeGenerateRequest": {
+        "properties": {
+          "force_regenerate": {
+            "default": false,
+            "title": "Force Regenerate",
+            "type": "boolean"
+          }
+        },
+        "title": "NarrativeGenerateRequest",
+        "type": "object"
+      },
+      "NarrativeResponse": {
+        "properties": {
+          "fallback_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason Code"
+          },
+          "generation_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Ms"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "report_hash": {
+            "title": "Report Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "traces": {
+            "items": {
+              "$ref": "#/components/schemas/FigureTrace"
+            },
+            "title": "Traces",
+            "type": "array"
+          },
+          "unavailable_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableMetric"
+            },
+            "title": "Unavailable Metrics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "summary",
+          "traces",
+          "unavailable_metrics",
+          "report_hash"
+        ],
+        "title": "NarrativeResponse",
+        "type": "object"
+      },
+      "PaymentModeMetrics": {
+        "properties": {
+          "billed_paise": {
+            "default": 0,
+            "title": "Billed Paise",
+            "type": "integer"
+          },
+          "collected_paise": {
+            "default": 0,
+            "title": "Collected Paise",
+            "type": "integer"
+          },
+          "outstanding_paise": {
+            "default": 0,
+            "title": "Outstanding Paise",
+            "type": "integer"
+          },
+          "refunds_paise": {
+            "default": 0,
+            "title": "Refunds Paise",
+            "type": "integer"
+          }
+        },
+        "title": "PaymentModeMetrics",
+        "type": "object"
+      },
+      "PeakHour": {
+        "properties": {
+          "end_hour_utc": {
+            "title": "End Hour Utc",
+            "type": "integer"
+          },
+          "revenue_paise": {
+            "title": "Revenue Paise",
+            "type": "integer"
+          },
+          "start_hour_utc": {
+            "title": "Start Hour Utc",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start_hour_utc",
+          "end_hour_utc",
+          "revenue_paise"
+        ],
+        "title": "PeakHour",
+        "type": "object"
+      },
+      "ReconciliationReport": {
+        "properties": {
+          "by_payment_mode": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PaymentModeMetrics"
+            },
+            "title": "By Payment Mode",
+            "type": "object"
+          },
+          "collection_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Rate"
+          },
+          "pending_visit_count": {
+            "title": "Pending Visit Count",
+            "type": "integer"
+          },
+          "refund_visit_count": {
+            "title": "Refund Visit Count",
+            "type": "integer"
+          },
+          "total_billed_paise": {
+            "title": "Total Billed Paise",
+            "type": "integer"
+          },
+          "total_collected_paise": {
+            "title": "Total Collected Paise",
+            "type": "integer"
+          },
+          "total_discount_paise": {
+            "title": "Total Discount Paise",
+            "type": "integer"
+          },
+          "total_outstanding_paise": {
+            "title": "Total Outstanding Paise",
+            "type": "integer"
+          },
+          "total_refunds_paise": {
+            "title": "Total Refunds Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_billed_paise",
+          "total_collected_paise",
+          "total_outstanding_paise",
+          "total_refunds_paise",
+          "total_discount_paise",
+          "collection_rate",
+          "pending_visit_count",
+          "refund_visit_count",
+          "by_payment_mode"
+        ],
+        "title": "ReconciliationReport",
+        "type": "object"
+      },
+      "UnavailableMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Metric",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "reason"
+        ],
+        "title": "UnavailableMetric",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Deterministic clinic-day billing reconciliation, analytics, and grounded narrative API.",
+    "title": "SwasthiQ EOD Billing & Analytics Agent",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/clinic-days": {
+      "get": {
+        "operationId": "list_clinic_days_api_v1_clinic_days_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "clinic_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clinic Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "List Clinic Days",
+        "tags": [
+          "clinic-days"
+        ]
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}": {
+      "get": {
+        "operationId": "get_clinic_day_api_v1_clinic_days__clinic_id___business_date__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "business_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Business Date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get Clinic Day",
+        "tags": [
+          "clinic-days"
+        ]
+      },
+      "put": {
+        "operationId": "replace_clinic_day_api_v1_clinic_days__clinic_id___business_date__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "business_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Business Date",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingLogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicDayResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Replace Clinic Day",
+        "tags": [
+          "clinic-days"
+        ]
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}/errors": {
+      "get": {
+        "operationId": "get_ingestion_errors_api_v1_clinic_days__clinic_id___business_date__errors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "business_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Business Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionIssueListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get Ingestion Errors",
+        "tags": [
+          "clinic-days"
+        ]
+      }
+    },
+    "/api/v1/clinic-days/{clinic_id}/{business_date}/narrative": {
+      "get": {
+        "operationId": "get_narrative_api_v1_clinic_days__clinic_id___business_date__narrative_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "business_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Business Date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrativeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get Narrative",
+        "tags": [
+          "narratives"
+        ]
+      },
+      "post": {
+        "operationId": "generate_narrative_api_v1_clinic_days__clinic_id___business_date__narrative_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clinic_id",
+            "required": true,
+            "schema": {
+              "title": "Clinic Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "business_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Business Date",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NarrativeGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrativeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Generate Narrative",
+        "tags": [
+          "narratives"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

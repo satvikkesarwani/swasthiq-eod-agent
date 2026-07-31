@@ -22,13 +22,16 @@ class NarrativeRepository:
         unavailable_metrics: list[dict],
         provider: str | None,
         model: str | None,
+        generation_ms: int | None = None,
+        fallback_reason_code: str | None = None,
     ) -> Narrative:
         narrative = self.get_for_clinic_day(clinic_day_id)
         if narrative is None:
             narrative = Narrative(clinic_day_id=clinic_day_id, report_hash=report_hash, status=status,
                                   summary_text=summary_text, traces_json=traces,
                                   unavailable_metrics_json=unavailable_metrics,
-                                  provider=provider, model=model)
+                                  provider=provider, model=model,
+                                  generation_ms=generation_ms, fallback_reason_code=fallback_reason_code)
             self.session.add(narrative)
         else:
             narrative.report_hash = report_hash
@@ -38,5 +41,7 @@ class NarrativeRepository:
             narrative.unavailable_metrics_json = unavailable_metrics
             narrative.provider = provider
             narrative.model = model
+            narrative.generation_ms = generation_ms
+            narrative.fallback_reason_code = fallback_reason_code
         self.session.flush()
         return narrative

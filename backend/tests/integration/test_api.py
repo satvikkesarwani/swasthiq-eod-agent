@@ -62,8 +62,9 @@ async def _asgi_request_without_content_length(app, *, path: str, body: bytes):
 
 def test_create_read_and_list_clinic_day(client, valid_rows):
     response = client.put("/api/v1/clinic-days/CLN-001/2026-07-27", json={"records": valid_rows})
-    assert response.status_code == 201
+    assert response.status_code == 200
     body = response.json()
+    assert body["operation"] == "created"
     assert body["status"] == "completed"
     assert body["report"]["reconciliation"]["total_billed_paise"] == 10500
 
@@ -72,7 +73,7 @@ def test_create_read_and_list_clinic_day(client, valid_rows):
     assert get_response.json()["report_hash"].startswith("sha256:")
 
     list_response = client.get("/api/v1/clinic-days", params={"clinic_id": "CLN-001"})
-    assert len(list_response.json()["items"]) == 1
+    assert list_response.json()["count"] == 1
 
 
 def test_partial_ingestion_uses_only_valid_rows(client, valid_rows):
@@ -83,12 +84,14 @@ def test_partial_ingestion_uses_only_valid_rows(client, valid_rows):
         "/api/v1/clinic-days/CLN-001/2026-07-27",
         json={"records": [valid_rows[0], malformed]},
     )
-    assert response.status_code == 201
+    assert response.status_code == 200
     body = response.json()
+    assert body["operation"] == "created"
     assert body["status"] == "completed_with_errors"
     assert body["ingestion"]["accepted_rows"] == 1
     assert body["ingestion"]["rejected_rows"] == 1
-    assert body["ingestion"]["errors"][0]["field"] == "payment_mode"
+    assert body["ingestion"]["errors"][0]["field_path"] == "payment_mode"
+    assert body["ingestion"]["errors"][0]["error_code"] == "FIELD_REQUIRED"
 
 
 def test_all_invalid_rows_do_not_create_report(client, valid_rows):
@@ -96,13 +99,14 @@ def test_all_invalid_rows_do_not_create_report(client, valid_rows):
     malformed.pop("payment_mode")
     response = client.put("/api/v1/clinic-days/CLN-001/2026-07-27", json={"records": [malformed]})
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "NO_VALID_ROWS"
+    assert response.json()["error"]["code"] == "NO_VALID_RECORDS"
     assert client.get("/api/v1/clinic-days/CLN-001/2026-07-27").status_code == 404
 
 
 def test_empty_day_is_valid(client):
     response = client.put("/api/v1/clinic-days/CLN-001/2026-07-26", json={"records": []})
-    assert response.status_code == 201
+    assert response.status_code == 200
+    assert response.json()["operation"] == "created"
     assert response.json()["report"]["analytics"]["peak_hour"] is None
 
 
@@ -174,7 +178,7 @@ def test_zero_priced_line_item_is_accepted_and_counted(client, valid_rows):
     }
 
     response = client.put("/api/v1/clinic-days/CLN-001/2026-07-27", json={"records": valid_rows + [zero_price]})
-    assert response.status_code == 201
+    assert response.status_code == 200
     body = response.json()
     assert body["ingestion"]["accepted_rows"] == 3
     assert body["report"]["reconciliation"]["total_billed_paise"] == 10_500
@@ -201,7 +205,7 @@ def test_raw_rejected_rows_are_not_persisted_or_returned_by_default(valid_rows):
             "/api/v1/clinic-days/CLN-001/2026-07-27",
             json={"records": [valid_rows[1], malformed]},
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
         assert "raw_row_json" not in response.text
         with local_client.app.state.session_factory() as session:
             stored_error = session.query(IngestionError).one()
@@ -216,7 +220,7 @@ def test_raw_rejected_rows_can_be_persisted_when_explicitly_enabled(valid_rows):
             "/api/v1/clinic-days/CLN-001/2026-07-27",
             json={"records": [valid_rows[1], malformed]},
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
         assert "raw_row_json" not in response.text
         with local_client.app.state.session_factory() as session:
             stored_error = session.query(IngestionError).one()
@@ -264,5 +268,5 @@ def test_request_at_or_under_body_limit_succeeds(valid_rows):
             content=body,
             headers={"Content-Type": "application/json"},
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
         assert response.json()["ingestion"]["accepted_rows"] == 1

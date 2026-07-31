@@ -48,7 +48,8 @@ def _build_provider(settings: Settings):
 def create_app(*, settings: Settings | None = None, narrative_provider=None) -> FastAPI:
     settings = settings or get_settings()
     engine = build_engine(settings.database_url)
-    Base.metadata.create_all(engine)
+    if settings.app_env == "test":
+        Base.metadata.create_all(engine)
     session_factory = build_session_factory(engine)
 
     @asynccontextmanager
@@ -129,6 +130,7 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     async def app_error_handler(request: Request, exc: AppError):
         return JSONResponse(
             status_code=exc.status_code,
+            headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},
             content={
                 "error": {
                     "code": exc.code,
@@ -151,9 +153,10 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
         ]
         return JSONResponse(
             status_code=422,
+            headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},
             content={
                 "error": {
-                    "code": "REQUEST_VALIDATION_FAILED",
+                    "code": "VALIDATION_ERROR",
                     "message": "The request does not match the API contract.",
                     "details": details,
                     "request_id": getattr(request.state, "request_id", None),
@@ -166,9 +169,10 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
         logger.exception("Unhandled API error", exc_info=exc)
         return JSONResponse(
             status_code=500,
+            headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},
             content={
                 "error": {
-                    "code": "INTERNAL_SERVER_ERROR",
+                    "code": "INTERNAL_ERROR",
                     "message": "An unexpected error occurred.",
                     "details": [],
                     "request_id": getattr(request.state, "request_id", None),

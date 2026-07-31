@@ -138,6 +138,8 @@ backend/app/
 
 - `id`: UUID/string primary key.
 - `clinic_id`: string.
+- `clinic_name`: nullable string.
+- `clinic_location`: nullable string.
 - `business_date`: date.
 - `status`: `completed`, `completed_with_errors`.
 - `received_rows`: integer.
@@ -148,6 +150,7 @@ backend/app/
 - `report_json`: deterministic report snapshot.
 - `created_at`, `updated_at`: UTC timestamps.
 - Unique constraint: `(clinic_id, business_date)`.
+- Indexes: `clinic_id`, `business_date`, and composite `(clinic_id, business_date)`.
 
 ### 5.2 `visits`
 
@@ -163,7 +166,9 @@ backend/app/
 - `gross_line_total_paise`.
 - `billed_paise`.
 - `outstanding_paise`.
+- `created_at`.
 - Unique constraint: `(clinic_day_id, visit_id)`.
+- Indexes: `clinic_day_id`, `timestamp_utc`, and `payment_mode`.
 
 ### 5.3 `line_items`
 
@@ -174,6 +179,7 @@ backend/app/
 - `qty`.
 - `unit_price_paise`.
 - `gross_revenue_paise`.
+- `created_at`.
 
 ### 5.4 `ingestion_errors`
 
@@ -181,10 +187,11 @@ backend/app/
 - `clinic_day_id` foreign key.
 - `row_index`.
 - `visit_id` nullable.
-- `field_path`.
-- `code`.
+- `field_path` nullable.
+- `error_code`.
 - `message`.
 - `raw_row_json` optional; omit in logs.
+- `created_at`.
 
 ### 5.5 `narratives`
 
@@ -194,8 +201,11 @@ backend/app/
 - `status`: `generated`, `fallback`, `failed`, `stale`.
 - `summary_text`.
 - `traces_json`.
+- `unavailable_metrics_json`.
 - `provider` nullable.
 - `model` nullable.
+- `generation_ms` nullable.
+- `fallback_reason_code` nullable.
 - `created_at`, `updated_at`.
 
 A narrative is valid only when `narrative.report_hash == clinic_day.report_hash`.
@@ -277,10 +287,11 @@ Request:
 }
 ```
 
-Success response: `200` for replacement or `201` for first creation.
+Success response: `200` for first creation, replacement, and unchanged idempotent uploads.
 
 ```json
 {
+  "operation": "created",
   "clinic_id": "CLN-KNP-014",
   "business_date": "2026-07-27",
   "status": "completed_with_errors",
@@ -314,7 +325,7 @@ Returns clinic metadata, ingestion summary, reconciliation, analytics, warnings,
 GET /api/v1/clinic-days/{clinic_id}/{business_date}/errors
 ```
 
-Returns row-level actionable errors.
+Returns paginated row-level actionable errors with `row_index`, `visit_id`, `field_path`, `error_code`, and safe `message`. Raw rejected rows are never serialized.
 
 ### 7.6 Generate or regenerate narrative
 
@@ -379,8 +390,8 @@ GET /api/v1/clinic-days/{clinic_id}/{business_date}/narrative
     "details": [
       {
         "row_index": 18,
-        "field": "payment_mode",
-        "code": "FIELD_REQUIRED",
+        "field_path": "payment_mode",
+        "error_code": "FIELD_REQUIRED",
         "message": "payment_mode is required"
       }
     ],
@@ -395,9 +406,87 @@ Expected statuses:
 - `404`: clinic-day not found.
 - `409`: context conflict/stale narrative.
 - `413`: file/request too large.
-- `422`: schema or domain validation failure.
+- `422`: schema or domain validation failure, including `NO_VALID_RECORDS` for all-invalid non-empty uploads.
 - `500`: unexpected failure only.
 - `503`: dependency unavailable when no fallback can be produced.
+
+## 8.1 Current ER Summary
+
+```mermaid
+erDiagram
+    CLINIC_DAYS ||--o{ VISITS : contains
+    VISITS ||--o{ LINE_ITEMS : contains
+    CLINIC_DAYS ||--o{ INGESTION_ERRORS : records
+    CLINIC_DAYS ||--o| NARRATIVES : has
+
+    CLINIC_DAYS {
+      string id PK
+      string clinic_id
+      string clinic_name
+      string clinic_location
+      date business_date
+      string status
+      int received_rows
+      int accepted_rows
+      int rejected_rows
+      string source_hash
+      string report_hash
+      json report_json
+      datetime created_at
+      datetime updated_at
+    }
+    VISITS {
+      string id PK
+      string clinic_day_id FK
+      string visit_id
+      datetime timestamp_utc
+      string doctor_id
+      string payment_mode
+      int amount_paid_paise
+      int discount_paise
+      boolean is_refund
+      int gross_line_total_paise
+      int billed_paise
+      int outstanding_paise
+      datetime created_at
+    }
+    LINE_ITEMS {
+      string id PK
+      string visit_id FK
+      string drug_name_source
+      string drug_name_normalized
+      int qty
+      int unit_price_paise
+      int gross_revenue_paise
+      datetime created_at
+    }
+    INGESTION_ERRORS {
+      string id PK
+      string clinic_day_id FK
+      int row_index
+      string visit_id
+      string field_path
+      string error_code
+      string message
+      json raw_row_json
+      datetime created_at
+    }
+    NARRATIVES {
+      string id PK
+      string clinic_day_id FK
+      string report_hash
+      string status
+      text summary_text
+      json traces_json
+      json unavailable_metrics_json
+      string provider
+      string model
+      int generation_ms
+      string fallback_reason_code
+      datetime created_at
+      datetime updated_at
+    }
+```
 
 ## 9. Report response shape
 

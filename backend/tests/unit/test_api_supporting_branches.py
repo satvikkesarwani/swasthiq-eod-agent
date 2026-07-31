@@ -91,6 +91,32 @@ def test_health_and_not_found_error_paths(client):
     assert errors.json()["error"]["code"] == "CLINIC_DAY_NOT_FOUND"
 
 
+def test_health_database_failure_returns_safe_error():
+    app = create_app(
+        settings=Settings(app_env="test", database_url="sqlite://", cors_origins=["http://test"]),
+        narrative_provider=DisabledNarrativeProvider(),
+    )
+
+    class BrokenSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def execute(self, statement):
+            raise RuntimeError("sqlite:////private/clinic.db should not leak")
+
+    app.state.session_factory = lambda: BrokenSession()
+    with TestClient(app, raise_server_exceptions=False) as local_client:
+        response = local_client.get("/api/v1/health", headers={"X-Request-ID": "req-health"})
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
+    assert response.json()["error"]["request_id"] == "req-health"
+    assert "private/clinic" not in response.text
+
+
 def test_unexpected_errors_return_safe_envelope():
     app = create_app(
         settings=Settings(app_env="test", database_url="sqlite://", cors_origins=["http://test"]),
@@ -106,7 +132,7 @@ def test_unexpected_errors_return_safe_envelope():
 
     assert response.status_code == 500
     assert response.json()["error"] == {
-        "code": "INTERNAL_SERVER_ERROR",
+        "code": "INTERNAL_ERROR",
         "message": "An unexpected error occurred.",
         "details": [],
         "request_id": "req-boom",
@@ -152,7 +178,7 @@ def test_invalid_content_length_falls_back_to_actual_body_check(valid_rows):
         messages.append(message)
 
     asyncio.run(app(scope, receive, send))
-    assert next(message["status"] for message in messages if message["type"] == "http.response.start") == 201
+    assert next(message["status"] for message in messages if message["type"] == "http.response.start") == 200
     app.state.engine.dispose()
 
 

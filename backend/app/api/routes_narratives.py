@@ -5,13 +5,21 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db, get_narrative_provider
 from app.integrations.llm_provider import NarrativeProvider
+from app.schemas.report import ErrorResponse
 from app.schemas.narrative import NarrativeGenerateRequest, NarrativeResponse
 from app.services.narrative_service import NarrativeService
 
 router = APIRouter(prefix="/clinic-days", tags=["narratives"])
 
+ERROR_RESPONSES = {
+    404: {"model": ErrorResponse},
+    409: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
 
-@router.post("/{clinic_id}/{business_date}/narrative", response_model=NarrativeResponse)
+
+@router.post("/{clinic_id}/{business_date}/narrative", response_model=NarrativeResponse, responses=ERROR_RESPONSES)
 def generate_narrative(
     clinic_id: str,
     business_date: date,
@@ -26,7 +34,7 @@ def generate_narrative(
     )
 
 
-@router.get("/{clinic_id}/{business_date}/narrative", response_model=NarrativeResponse)
+@router.get("/{clinic_id}/{business_date}/narrative", response_model=NarrativeResponse, responses=ERROR_RESPONSES)
 def get_narrative(
     clinic_id: str,
     business_date: date,

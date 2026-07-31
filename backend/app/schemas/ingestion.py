@@ -12,9 +12,9 @@ class PaymentMode(StrEnum):
 
 
 class BillingLogRequest(BaseModel):
-    records: list[Any]
-    clinic_name: str = Field(default="Mehta Multi-Specialty Clinic", min_length=1, max_length=200)
-    clinic_location: str = Field(default="Kanpur, Uttar Pradesh", min_length=1, max_length=300)
+    records: list[Any] = Field(description="Submitted clinic-day billing rows. May be empty for a valid no-activity day.")
+    clinic_name: str | None = Field(default=None, min_length=1, max_length=200, description="Optional clinic display name.")
+    clinic_location: str | None = Field(default=None, min_length=1, max_length=300, description="Optional clinic location.")
 
 
 class LineItemInput(BaseModel):

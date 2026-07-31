@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -16,12 +16,15 @@ def utc_now() -> datetime:
 
 class ClinicDay(Base):
     __tablename__ = "clinic_days"
-    __table_args__ = (UniqueConstraint("clinic_id", "business_date", name="uq_clinic_day"),)
+    __table_args__ = (
+        UniqueConstraint("clinic_id", "business_date", name="uq_clinic_day"),
+        Index("ix_clinic_days_clinic_business_date", "clinic_id", "business_date"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     clinic_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    clinic_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    clinic_location: Mapped[str] = mapped_column(String(300), nullable=False)
+    clinic_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    clinic_location: Mapped[str | None] = mapped_column(String(300), nullable=True)
     business_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     received_rows: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -40,7 +43,11 @@ class ClinicDay(Base):
 
 class Visit(Base):
     __tablename__ = "visits"
-    __table_args__ = (UniqueConstraint("clinic_day_id", "visit_id", name="uq_visit_per_day"),)
+    __table_args__ = (
+        UniqueConstraint("clinic_day_id", "visit_id", name="uq_visit_per_day"),
+        Index("ix_visits_timestamp_utc", "timestamp_utc"),
+        Index("ix_visits_payment_mode", "payment_mode"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     clinic_day_id: Mapped[str] = mapped_column(ForeignKey("clinic_days.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -54,6 +61,7 @@ class Visit(Base):
     gross_line_total_paise: Mapped[int] = mapped_column(Integer, nullable=False)
     billed_paise: Mapped[int] = mapped_column(Integer, nullable=False)
     outstanding_paise: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     clinic_day: Mapped[ClinicDay] = relationship(back_populates="visits")
     line_items: Mapped[list[LineItem]] = relationship(back_populates="visit", cascade="all, delete-orphan")
@@ -63,27 +71,30 @@ class LineItem(Base):
     __tablename__ = "line_items"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    visit_id_fk: Mapped[str] = mapped_column(ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
+    visit_id: Mapped[str] = mapped_column(ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
     drug_name_source: Mapped[str] = mapped_column(String(200), nullable=False)
     drug_name_normalized: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     qty: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price_paise: Mapped[int] = mapped_column(Integer, nullable=False)
     gross_revenue_paise: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     visit: Mapped[Visit] = relationship(back_populates="line_items")
 
 
 class IngestionError(Base):
     __tablename__ = "ingestion_errors"
+    __table_args__ = (Index("ix_ingestion_errors_clinic_day_row", "clinic_day_id", "row_index"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     clinic_day_id: Mapped[str] = mapped_column(ForeignKey("clinic_days.id", ondelete="CASCADE"), nullable=False, index=True)
     row_index: Mapped[int] = mapped_column(Integer, nullable=False)
     visit_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    field_path: Mapped[str] = mapped_column(String(300), nullable=False)
-    code: Mapped[str] = mapped_column(String(80), nullable=False)
+    field_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    error_code: Mapped[str] = mapped_column(String(80), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     raw_row_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     clinic_day: Mapped[ClinicDay] = relationship(back_populates="ingestion_errors")
 
@@ -101,6 +112,8 @@ class Narrative(Base):
     unavailable_metrics_json: Mapped[list[dict[str, str]]] = mapped_column(JSON, nullable=False)
     provider: Mapped[str | None] = mapped_column(String(100), nullable=True)
     model: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    generation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fallback_reason_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 

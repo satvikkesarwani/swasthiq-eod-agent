@@ -22,7 +22,7 @@ GET /api/v1/health
 ### List clinic-days
 
 ```http
-GET /api/v1/clinic-days?clinic_id={optional}
+GET /api/v1/clinic-days?clinic_id={optional}&date_from={optional}&date_to={optional}&limit=20&offset=0
 ```
 
 ### Create or replace clinic-day
@@ -39,6 +39,18 @@ Request:
   "clinic_name": "Mehta Multi-Specialty Clinic",
   "clinic_location": "Kanpur, Uttar Pradesh",
   "records": []
+}
+```
+
+Success response: HTTP 200 for idempotent creation, replacement, and unchanged uploads. The response includes:
+
+```json
+{
+  "operation": "created",
+  "clinic_id": "CLN-KNP-014",
+  "business_date": "2026-07-27",
+  "source_hash": "sha256:...",
+  "report_hash": "sha256:..."
 }
 ```
 
@@ -124,7 +136,7 @@ GET /api/v1/clinic-days/{clinic_id}/{business_date}/narrative
 
 ### Non-empty but all invalid
 
-- `422 NO_VALID_ROWS`.
+- `422 NO_VALID_RECORDS`.
 - Existing report remains unchanged.
 
 ## 6. Report invariants
@@ -220,7 +232,7 @@ erDiagram
       string clinic_day_id FK
       int row_index
       string field_path
-      string code
+      string error_code
       string message
     }
     NARRATIVES {
@@ -236,6 +248,12 @@ erDiagram
       string fallback_reason_code
     }
 ```
+
+## 10. Final Hashing Rules
+
+`source_hash` is SHA-256 over canonical JSON containing route `clinic_id`, route `business_date`, optional clinic metadata, and submitted records in submitted order.
+
+`report_hash` is SHA-256 over canonical JSON containing route clinic/date, accepted/rejected counts, and deterministic report content. It excludes database IDs, request IDs, timestamps, API URLs, narrative content, LLM metadata, and UI-only formatting.
 
 ## 9. Frontend contract strategy
 

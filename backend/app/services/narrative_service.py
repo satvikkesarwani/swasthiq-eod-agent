@@ -201,6 +201,8 @@ class NarrativeService:
                 report_hash=existing.report_hash,
                 provider=existing.provider,
                 model=existing.model,
+                generation_ms=existing.generation_ms,
+                fallback_reason_code=existing.fallback_reason_code,
             )
 
         catalogue = build_trace_catalogue(clinic_day=clinic_day)
@@ -243,6 +245,8 @@ class NarrativeService:
                 unavailable_metrics=unavailable,
                 provider=provider_name,
                 model=model_name,
+                generation_ms=None,
+                fallback_reason_code="PROVIDER_UNAVAILABLE" if status == "fallback" else None,
             )
             self.session.commit()
         except Exception:
@@ -257,6 +261,8 @@ class NarrativeService:
             report_hash=clinic_day.report_hash,
             provider=provider_name,
             model=model_name,
+            generation_ms=None,
+            fallback_reason_code="PROVIDER_UNAVAILABLE" if status == "fallback" else None,
         )
 
     def get(self, *, clinic_id: str, business_date) -> NarrativeResponse:
@@ -276,4 +282,6 @@ class NarrativeService:
             report_hash=narrative.report_hash,
             provider=narrative.provider,
             model=narrative.model,
+            generation_ms=narrative.generation_ms,
+            fallback_reason_code=narrative.fallback_reason_code,
         )

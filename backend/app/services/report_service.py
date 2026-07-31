@@ -14,6 +14,40 @@ def canonical_hash(payload: Any) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
+def build_source_hash_payload(
+    *,
+    clinic_id: str,
+    business_date: str,
+    clinic_name: str | None,
+    clinic_location: str | None,
+    records: list[Any],
+) -> dict[str, Any]:
+    return {
+        "clinic_id": clinic_id,
+        "business_date": business_date,
+        "clinic_name": clinic_name,
+        "clinic_location": clinic_location,
+        "records": records,
+    }
+
+
+def build_report_hash_payload(
+    *,
+    clinic_id: str,
+    business_date: str,
+    accepted_rows: int,
+    rejected_rows: int,
+    report: DeterministicReport,
+) -> dict[str, Any]:
+    return {
+        "clinic_id": clinic_id,
+        "business_date": business_date,
+        "accepted_rows": accepted_rows,
+        "rejected_rows": rejected_rows,
+        "report": report.model_dump(mode="json"),
+    }
+
+
 def _edit_distance_at_most_one(left: str, right: str) -> bool:
     if left == right:
         return False
