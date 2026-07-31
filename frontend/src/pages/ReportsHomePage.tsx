@@ -1,42 +1,52 @@
-import { Search } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { useLoaderData } from "react-router";
 
-import { EmptyState } from "../components/feedback/EmptyState";
-import { Button } from "../components/primitives/Button";
 import { GlassPanel } from "../components/primitives/GlassPanel";
 import { StatusPill } from "../components/primitives/StatusPill";
 import { PageContainer } from "../components/layout/PageContainer";
+import { BillingImportForm } from "../features/import/components/BillingImportForm";
+import { ImportPipelineStatus } from "../features/import/components/ImportPipelineStatus";
+import { ValidationIssuesDrawer } from "../features/import/components/ValidationIssuesDrawer";
+import type { ImportResult } from "../features/import/types";
+import { RecentReportsPanel, type ReportsLoaderData } from "../features/reports/components/RecentReportsPanel";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import styles from "./Page.module.css";
 
 export function ReportsHomePage() {
   useDocumentTitle("Reports");
+  const loaderData: ReportsLoaderData = useLoaderData();
+  const [partialResult, setPartialResult] = useState<ImportResult | null>(null);
+  const [issuesOpen, setIssuesOpen] = useState(false);
 
   return (
     <PageContainer
       eyebrow="Reports workspace"
-      title="Grounded EOD reports"
-      description="Review imported clinic days, then open reconciliation, analytics, or narrative views when a report context is available."
+      title="Reports"
+      description="Import a clinic-day billing log, review backend validation outcomes, and open stored EOD reports."
     >
       <div className={styles.twoColumn}>
-        <GlassPanel title="Report finder" description="The foundation is connected to the backend contract without rendering synthetic report values.">
-          <EmptyState
-            title="No report selected"
-            message="Prompt 5 establishes the shell and typed API surface. Report listing and import workflows remain reserved for later prompts."
-            action={(
-              <div className={styles.actions}>
-                <Button variant="primary" icon={<Search size={16} aria-hidden="true" />}>Ready for API data</Button>
-              </div>
-            )}
+        <BillingImportForm
+          recentReports={loaderData.response?.items ?? []}
+          onPartialResult={setPartialResult}
+          onReviewIssues={() => setIssuesOpen(true)}
+        />
+        <GlassPanel title="Pipeline status" description="The browser checks file structure; the backend validates rows and owns every report value.">
+          <ImportPipelineStatus
+            status={partialResult ? "completed_with_errors" : "idle"}
+            hasFile={Boolean(partialResult)}
+            hasResult={Boolean(partialResult)}
+            rejectedRows={partialResult?.rejectedRows ?? 0}
           />
-        </GlassPanel>
-        <GlassPanel title="Contract readiness" compact>
-          <ul className={styles.contractList}>
-            <li><span>OpenAPI schema</span><StatusPill tone="healthy">Generated</StatusPill></li>
-            <li><span>Native fetch client</span><StatusPill tone="healthy">Ready</StatusPill></li>
-            <li><span>Business pages</span><StatusPill tone="fallback">Placeholder</StatusPill></li>
-          </ul>
+          <div className={styles.contractList}>
+            <div><ShieldCheck size={18} aria-hidden="true" /> Rows are validated securely by the billing service after submission.</div>
+            <div><StatusPill tone="healthy">Native fetch</StatusPill></div>
+            <div><StatusPill tone="fallback">Narrative later</StatusPill></div>
+          </div>
         </GlassPanel>
       </div>
+      <RecentReportsPanel data={loaderData} />
+      <ValidationIssuesDrawer open={issuesOpen} result={partialResult} onClose={() => setIssuesOpen(false)} />
     </PageContainer>
   );
 }

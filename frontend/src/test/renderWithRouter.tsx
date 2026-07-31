@@ -5,6 +5,7 @@ import type { RouteObject } from "react-router";
 import { AppProviders } from "../app/AppProviders";
 import { RouteErrorBoundary } from "../app/RouteErrorBoundary";
 import { AppShell } from "../components/layout/AppShell";
+import { reportsLoader } from "../features/reports/loader";
 import { AnalyticsPage } from "../pages/AnalyticsPage";
 import { NarrativePage } from "../pages/NarrativePage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -21,7 +22,7 @@ export function appRoutes(): RouteObject[] {
         {
           Component: AppShell,
           children: [
-            { path: "reports", Component: ReportsHomePage },
+            { path: "reports", Component: ReportsHomePage, loader: reportsLoader },
             { path: "reports/:clinicId/:businessDate/reconciliation", Component: ReconciliationPage },
             { path: "reports/:clinicId/:businessDate/analytics", Component: AnalyticsPage },
             { path: "reports/:clinicId/:businessDate/narrative", Component: NarrativePage },

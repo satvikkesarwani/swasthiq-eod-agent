@@ -298,6 +298,10 @@ Profit is not available because cost-price data was not provided.
 - Semantic headings and landmarks.
 - All icon-only navigation has accessible names.
 - Visible keyboard focus.
+
+## Prompt 6 Implementation Note
+
+Prompt 6 keeps the Prompt 5 dark floating glass-panel interface rather than the earlier light-card palette in this planning document. The Reports route now contains the first end-to-end workflow: clinic/date metadata, accessible JSON dropzone, conservative file-size validation, backend-authoritative import submission, partial-import issue review, recent-report filters, URL-backed pagination, and report-opening links. Final reconciliation KPI cards, analytics charts, and AI narrative controls remain deferred to Prompts 7-9.
 - Minimum 4.5:1 contrast for normal text.
 - Chart includes a text summary and peak value outside the SVG.
 - Status is not communicated using color alone.

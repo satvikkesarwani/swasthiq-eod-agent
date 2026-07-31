@@ -11,8 +11,9 @@ Implementation workspace for a Python REST API and React interface that converts
 - Prompt 3: LangChain + NVIDIA `ChatNVIDIA` narrative provider integrated behind deterministic grounding and safe fallback.
 - Prompt 4: Complete grounded narrative pipeline, intent policy, semantic repair, and deterministic fallback finalized.
 - Prompt 5: React frontend foundation, typed OpenAPI client, design system, app shell, and placeholder routes finalized.
+- Prompt 6: Billing-log import, validation issues, recent reports, filters, pagination, and report-opening workflow finalized.
 - Pre-coding package for Steps 4–7: complete.
-- Remaining coding: full frontend business workflows, CI, deployment, and production hardening outside Prompt 5 scope.
+- Remaining coding: final reconciliation dashboard, analytics screen, AI narrative screen, CI, deployment, and production hardening outside Prompt 6 scope.
 
 ## Locked stack
 
@@ -65,6 +66,8 @@ Prompt 4 grounded narrative pipeline details are recorded in [`docs/implementati
 
 Prompt 5 frontend foundation details are recorded in [`docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md`](docs/implementation/05_FRONTEND_FOUNDATION_REPORT.md).
 
+Prompt 6 import and recent-report workflow details are recorded in [`docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md`](docs/implementation/06_IMPORT_AND_REPORT_WORKFLOW_REPORT.md).
+
 ## Frontend verification
 
 From `frontend/`, run:
@@ -80,6 +83,26 @@ npm run build
 ```
 
 The frontend defaults to same-origin `/api/v1`. Set `VITE_DEV_PROXY_TARGET` for the local backend proxy and `VITE_API_BASE_URL` only when using a separate backend origin.
+
+## Import workflow
+
+The Reports page accepts one `.json` billing log at a time. The browser only checks file extension, size, readability, valid JSON, and that the root value is an array. The frontend file limit is `4.75 MiB`, chosen below the backend `5 MiB` request limit so added clinic metadata is less likely to exceed the service boundary. Empty arrays are valid empty clinic days.
+
+All row validation, financial calculations, accepted/rejected decisions, report generation, and validation issue messages remain backend-authoritative. Partial imports show accepted/rejected counts and safe issue details without raw rejected rows.
+
+```mermaid
+flowchart TD
+    A["Open /reports"] --> B["Filter or review recent reports"]
+    A --> C["Enter clinic and business date"]
+    C --> D["Choose or drop one JSON file"]
+    D --> E["Browser checks file and JSON array shape"]
+    E --> F["PUT exact records to /api/v1/clinic-days/{clinic_id}/{business_date}"]
+    F --> G{"Rejected rows?"}
+    G -->|"0"| H["Refresh recent reports and open reconciliation"]
+    G -->|"> 0"| I["Show partial result and validation issues drawer"]
+    B --> J["Open stored report"]
+    I --> H
+```
 
 ## Database and Migrations
 

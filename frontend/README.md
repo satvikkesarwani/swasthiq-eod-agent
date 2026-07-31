@@ -37,3 +37,17 @@ npm run build
 - `/reports/:clinicId/:businessDate/narrative`
 
 Prompt 5 intentionally ships polished placeholders only. Import, reconciliation, analytics, and narrative data integration are deferred to later prompts.
+
+## Import Workflow
+
+`/reports` now supports the Prompt 6 billing-log workflow:
+
+- enter clinic ID, optional clinic name/location, and business date;
+- choose or drag one `.json` file;
+- browser checks file size, readability, JSON syntax, and array root only;
+- submit the complete parsed array to `PUT /api/v1/clinic-days/{clinic_id}/{business_date}`;
+- show created/replaced/unchanged and partial-import outcomes;
+- review safe validation issues from the backend;
+- filter, page, and open recent reports.
+
+The frontend accepts files up to `4.75 MiB` while documenting the backend `5 MiB` request limit. It does not persist raw billing records, preview raw rows, calculate money, or validate business row rules.
