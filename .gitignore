@@ -30,3 +30,6 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
+
+# Local browser inspection artifacts
+.playwright-mcp/
