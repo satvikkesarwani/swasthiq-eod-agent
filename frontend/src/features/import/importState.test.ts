@@ -29,6 +29,9 @@ describe("importReducer", () => {
     state = importReducer(state, { type: "submit_failed", token: 2, error: "failed" });
     expect(state.parsedFile).toBe(parsedFile);
     expect(state.status).toBe("file_ready");
+    expect(state.submitError).toBe("failed");
+    state = importReducer(state, { type: "form_changed" });
+    expect(state.submitError).toBeNull();
     state = importReducer(state, { type: "remove_file" });
     expect(state.parsedFile).toBeNull();
   });

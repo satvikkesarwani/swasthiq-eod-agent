@@ -61,7 +61,7 @@ export function importReducer(state: ImportState, action: ImportAction): ImportS
       if (state.status === "completed" || state.status === "completed_with_errors") {
         return { ...state, status: state.parsedFile ? "file_ready" : "idle", importResult: null, submitError: null };
       }
-      return state;
+      return { ...state, submitError: null };
     case "reset":
       return { ...initialImportState, token: state.token + 1 };
   }
