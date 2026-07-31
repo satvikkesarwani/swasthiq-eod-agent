@@ -21,14 +21,23 @@ export function AnalyticsDefinitionsPanel({ report }: { report: ClinicDayDetail 
           <strong>{shortHash(report.report_hash)}</strong>
         </div>
       </div>
-      <dl className={styles.definitionList}>
-        <dt>Revenue by hour</dt>
-        <dd>Backend billed-sales revenue bucketed by UTC hour.</dd>
-        <dt>Peak billing hour</dt>
-        <dd>The backend selected peak hour, when available.</dd>
-        <dt>Medicine rankings</dt>
-        <dd>Backend ordered medicine rankings by quantity and revenue.</dd>
-      </dl>
+      <div className={styles.definitionSection}>
+        <h3>Definitions</h3>
+        <dl className={styles.definitionList}>
+          <div>
+            <dt>Revenue by hour</dt>
+            <dd>Backend billed-sales revenue bucketed by UTC hour.</dd>
+          </div>
+          <div>
+            <dt>Peak billing hour</dt>
+            <dd>The backend selected peak hour, when available.</dd>
+          </div>
+          <div>
+            <dt>Medicine rankings</dt>
+            <dd>Backend ordered medicine rankings by quantity and revenue.</dd>
+          </div>
+        </dl>
+      </div>
     </GlassPanel>
   );
 }
