@@ -13,12 +13,19 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 
 import { router } from "./app/router";
+import { logDiagnostic, logGlobalDiagnostics } from "./lib/diagnostics";
 
 const root = document.getElementById("root");
 
 if (root === null) {
   throw new Error("Root element was not found.");
 }
+
+logGlobalDiagnostics();
+logDiagnostic("info", "main", "Frontend boot", {
+  path: window.location.pathname,
+  online: navigator.onLine,
+});
 
 createRoot(root).render(
   <StrictMode>

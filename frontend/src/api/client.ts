@@ -1,4 +1,5 @@
 import type { ApiErrorPayload } from "./types";
+import { logDiagnostic } from "../lib/diagnostics";
 
 const API_PREFIX = "/api/v1";
 export const API_OK_EVENT = "swasthiq:api-ok";
@@ -8,6 +9,15 @@ export type ApiRequestOptions = {
   body?: unknown;
   signal?: AbortSignal;
 };
+
+type RuntimeEnv = {
+  DEV?: boolean;
+  VITE_API_BASE_URL?: string;
+};
+
+function runtimeEnv(): RuntimeEnv {
+  return ((import.meta as ImportMeta & { env?: RuntimeEnv }).env ?? {});
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -26,8 +36,7 @@ export class ApiError extends Error {
 }
 
 export function normalizeApiBase(rawBase?: string): string {
-  const meta = import.meta as ImportMeta & { env: { VITE_API_BASE_URL?: string } };
-  const envBase = meta.env.VITE_API_BASE_URL;
+  const envBase = runtimeEnv().VITE_API_BASE_URL;
   const candidate = rawBase ?? envBase ?? "";
   const trimmed = candidate.trim().replace(/\/+$/, "");
   return trimmed.endsWith(API_PREFIX) ? trimmed.slice(0, -API_PREFIX.length) : trimmed;
@@ -41,8 +50,8 @@ export function apiUrl(path: string, query?: URLSearchParams): string {
 }
 
 function localDevFallbackUrl(path: string, query?: URLSearchParams): string | null {
-  const meta = import.meta as ImportMeta & { env: { DEV?: boolean; VITE_API_BASE_URL?: string } };
-  if (meta.env.VITE_API_BASE_URL || !meta.env.DEV || typeof window === "undefined") {
+  const env = runtimeEnv();
+  if (env.VITE_API_BASE_URL || !env.DEV || typeof window === "undefined") {
     return null;
   }
   if (!["localhost", "127.0.0.1"].includes(window.location.hostname)) {
@@ -57,6 +66,67 @@ function apiUrlCandidates(path: string, query?: URLSearchParams): string[] {
   const primary = apiUrl(path, query);
   const fallback = localDevFallbackUrl(path, query);
   return fallback && fallback !== primary ? [primary, fallback] : [primary];
+}
+
+function headersFromXhr(rawHeaders: string): Headers {
+  const headers = new Headers();
+  for (const line of rawHeaders.trim().split(/[\r\n]+/)) {
+    const separator = line.indexOf(":");
+    if (separator > 0) {
+      headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim());
+    }
+  }
+  return headers;
+}
+
+function requestWithXhr(url: string, init: RequestInit): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    if (typeof XMLHttpRequest === "undefined") {
+      reject(new TypeError("No browser HTTP transport is available."));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    const method = init.method ?? "GET";
+    xhr.open(method, url, true);
+    xhr.responseType = "text";
+    xhr.withCredentials = init.credentials === "include";
+
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => xhr.setRequestHeader(key, value));
+    }
+
+    const abort = () => {
+      xhr.abort();
+      reject(new DOMException("The request was aborted.", "AbortError"));
+    };
+    init.signal?.addEventListener("abort", abort, { once: true });
+    xhr.addEventListener("load", () => {
+      init.signal?.removeEventListener("abort", abort);
+      resolve(new Response(xhr.responseText, {
+        status: xhr.status,
+        statusText: xhr.statusText,
+        headers: headersFromXhr(xhr.getAllResponseHeaders()),
+      }));
+    });
+    xhr.addEventListener("error", () => {
+      init.signal?.removeEventListener("abort", abort);
+      reject(new TypeError("XMLHttpRequest network request failed."));
+    });
+    xhr.addEventListener("timeout", () => {
+      init.signal?.removeEventListener("abort", abort);
+      reject(new TypeError("XMLHttpRequest timed out."));
+    });
+    xhr.send(typeof init.body === "string" ? init.body : null);
+  });
+}
+
+async function sendHttpRequest(url: string, init: RequestInit): Promise<Response> {
+  if (typeof fetch === "function") {
+    logDiagnostic("debug", "api", "Using fetch transport", { url });
+    return fetch(url, init);
+  }
+  logDiagnostic("warn", "api", "Fetch transport missing; using XMLHttpRequest fallback", { url });
+  return requestWithXhr(url, init);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,6 +159,7 @@ function toApiError(payload: unknown, status: number, fallbackRequestId: string 
 }
 
 export async function requestJson<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const startedAt = performance.now();
   const headers = new Headers({ Accept: "application/json" });
   let body: string | undefined;
   if (options.body !== undefined) {
@@ -110,11 +181,26 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
       init.signal = options.signal;
     }
     const urls = apiUrlCandidates(path);
+    logDiagnostic("info", "api", "Request start", {
+      method: init.method,
+      path,
+      urls,
+      hasBody: body !== undefined,
+      bodyBytes: body?.length ?? 0,
+    });
     for (const [index, url] of urls.entries()) {
       try {
-        response = await fetch(url, init);
+        logDiagnostic("debug", "api", "Fetch candidate", { index, url });
+        response = await sendHttpRequest(url, init);
+        logDiagnostic("debug", "api", "Fetch candidate returned", {
+          index,
+          url,
+          status: response.status,
+          ok: response.ok,
+        });
         break;
       } catch (error) {
+        logDiagnostic("warn", "api", "Fetch candidate failed", { index, url, error });
         if (error instanceof DOMException && error.name === "AbortError") {
           throw error;
         }
@@ -128,18 +214,34 @@ export async function requestJson<T>(path: string, options: ApiRequestOptions = 
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
+      logDiagnostic("warn", "api", "Request aborted", { path });
       throw error;
     }
+    logDiagnostic("error", "api", "Request network failure", { path, error });
     throw new ApiError("Unable to reach the server.", 0, "NETWORK_ERROR", null);
   }
 
   const requestId = response.headers.get("x-request-id");
   const payload = await parseJson(response);
   if (!response.ok) {
+    logDiagnostic("warn", "api", "Request failed response", {
+      method: options.method ?? "GET",
+      path,
+      status: response.status,
+      requestId,
+      elapsedMs: Math.round(performance.now() - startedAt),
+    });
     throw toApiError(payload, response.status, requestId);
   }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(API_OK_EVENT));
   }
+  logDiagnostic("info", "api", "Request success", {
+    method: options.method ?? "GET",
+    path,
+    status: response.status,
+    requestId,
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
   return payload as T;
 }

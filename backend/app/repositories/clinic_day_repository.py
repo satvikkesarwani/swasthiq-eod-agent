@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import Any
 
@@ -6,6 +7,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import ClinicDay, IngestionError, LineItem, Visit
 from app.schemas.ingestion import RowIssue, ValidatedVisit
+
+logger = logging.getLogger(__name__)
 
 
 class ClinicDayRepository:
@@ -64,6 +67,15 @@ class ClinicDayRepository:
     ) -> tuple[ClinicDay, str]:
         clinic_day = self.get(clinic_id, business_date, with_children=True)
         created = clinic_day is None
+        logger.info(
+            "repository.replace start clinic_id=%s business_date=%s existing=%s accepted=%s rejected_issues=%s rejected_rows=%s",
+            clinic_id,
+            business_date,
+            not created,
+            len(accepted),
+            len(rejected),
+            rejected_row_count,
+        )
         if clinic_day is None:
             clinic_day = ClinicDay(
                 clinic_id=clinic_id,
@@ -81,6 +93,12 @@ class ClinicDayRepository:
             self.session.add(clinic_day)
             self.session.flush()
             operation = "created"
+            logger.info(
+                "repository.replace created clinic_id=%s business_date=%s clinic_day_id=%s",
+                clinic_id,
+                business_date,
+                clinic_day.id,
+            )
         else:
             previous_hash = clinic_day.report_hash
             previous_source_hash = clinic_day.source_hash
@@ -100,6 +118,14 @@ class ClinicDayRepository:
                 clinic_day.narrative = None
             self.session.flush()
             operation = "unchanged" if previous_hash == report_hash and previous_source_hash == source_hash else "replaced"
+            logger.info(
+                "repository.replace updated clinic_id=%s business_date=%s operation=%s previous_report_hash=%s new_report_hash=%s",
+                clinic_id,
+                business_date,
+                operation,
+                previous_hash,
+                report_hash,
+            )
 
         for accepted_visit in accepted:
             visit_model = Visit(
@@ -139,4 +165,12 @@ class ClinicDayRepository:
             )
 
         self.session.flush()
+        logger.info(
+            "repository.replace done clinic_id=%s business_date=%s operation=%s visits=%s errors=%s",
+            clinic_id,
+            business_date,
+            operation,
+            len(accepted),
+            len(rejected),
+        )
         return clinic_day, operation

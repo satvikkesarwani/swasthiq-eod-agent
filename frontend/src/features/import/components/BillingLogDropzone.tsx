@@ -6,6 +6,7 @@ import { Button } from "../../../components/primitives/Button";
 import { IconButton } from "../../../components/primitives/IconButton";
 import { Badge } from "../../../components/primitives/Badge";
 import { classNames } from "../../../lib/classNames";
+import { logDiagnostic } from "../../../lib/diagnostics";
 import { BILLING_FILE_LIMIT_LABEL } from "../constants";
 import type { BillingFileError, ParsedBillingFile } from "../types";
 import styles from "./ImportWorkflow.module.css";
@@ -25,6 +26,7 @@ export function BillingLogDropzone({ parsedFile, error, reading, onFilesSelected
   const [dragActive, setDragActive] = useState(false);
 
   const chooseFile = () => {
+    logDiagnostic("info", "import.dropzone", "Choose file clicked");
     inputRef.current?.click();
   };
 
@@ -40,6 +42,11 @@ export function BillingLogDropzone({ parsedFile, error, reading, onFilesSelected
         aria-describedby={helperId}
         onChange={(event) => {
           if (event.target.files) {
+            logDiagnostic("info", "import.dropzone", "File input changed", {
+              count: event.target.files.length,
+              firstFileName: event.target.files[0]?.name,
+              firstFileSizeBytes: event.target.files[0]?.size,
+            });
             onFilesSelected(event.target.files);
           }
           event.currentTarget.value = "";
@@ -61,6 +68,11 @@ export function BillingLogDropzone({ parsedFile, error, reading, onFilesSelected
         onDrop={(event) => {
           event.preventDefault();
           setDragActive(false);
+          logDiagnostic("info", "import.dropzone", "File dropped", {
+            count: event.dataTransfer.files.length,
+            firstFileName: event.dataTransfer.files[0]?.name,
+            firstFileSizeBytes: event.dataTransfer.files[0]?.size,
+          });
           onFilesSelected(event.dataTransfer.files);
         }}
       >

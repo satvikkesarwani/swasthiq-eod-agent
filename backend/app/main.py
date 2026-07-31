@@ -1,4 +1,5 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -16,6 +17,12 @@ from app.db.session import Base, build_engine, build_session_factory
 from app.integrations.llm_provider import ChatNVIDIANarrativeProvider, DisabledNarrativeProvider
 
 logger = logging.getLogger(__name__)
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger("app").setLevel(logging.INFO)
+if not logging.getLogger("app").handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    logging.getLogger("app").addHandler(handler)
 
 
 def _error_response(*, request: Request, code: str, message: str, status_code: int) -> JSONResponse:
@@ -87,6 +94,12 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
             if content_length is not None:
                 try:
                     if int(content_length) > limit:
+                        logger.warning(
+                            "request.body_too_large content_length=%s limit=%s path=%s",
+                            content_length,
+                            limit,
+                            request.url.path,
+                        )
                         return _error_response(
                             request=request,
                             code="REQUEST_TOO_LARGE",
@@ -100,6 +113,12 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
             async for chunk in request.stream():
                 body.extend(chunk)
                 if len(body) > limit:
+                    logger.warning(
+                        "request.body_stream_too_large bytes=%s limit=%s path=%s",
+                        len(body),
+                        limit,
+                        request.url.path,
+                    )
                     return _error_response(
                         request=request,
                         code="REQUEST_TOO_LARGE",
@@ -125,12 +144,48 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or f"req_{uuid4().hex}"
         request.state.request_id = request_id
-        response = await call_next(request)
+        started_at = time.perf_counter()
+        logger.info(
+            "request.start request_id=%s method=%s path=%s query=%s content_length=%s origin=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            request.url.query,
+            request.headers.get("content-length"),
+            request.headers.get("origin"),
+        )
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception(
+                "request.exception request_id=%s method=%s path=%s elapsed_ms=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                round((time.perf_counter() - started_at) * 1000),
+            )
+            raise
         response.headers["X-Request-ID"] = request_id
+        logger.info(
+            "request.end request_id=%s method=%s path=%s status=%s elapsed_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            round((time.perf_counter() - started_at) * 1000),
+        )
         return response
 
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError):
+        logger.warning(
+            "app_error request_id=%s code=%s status=%s message=%s details_count=%s",
+            getattr(request.state, "request_id", None),
+            exc.code,
+            exc.status_code,
+            exc.message,
+            len(exc.details),
+        )
         return JSONResponse(
             status_code=exc.status_code,
             headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},
@@ -154,6 +209,12 @@ def create_app(*, settings: Settings | None = None, narrative_provider=None) -> 
             }
             for error in exc.errors()
         ]
+        logger.warning(
+            "request.validation_error request_id=%s path=%s details=%s",
+            getattr(request.state, "request_id", None),
+            request.url.path,
+            details,
+        )
         return JSONResponse(
             status_code=422,
             headers={"X-Request-ID": getattr(request.state, "request_id", None) or ""},

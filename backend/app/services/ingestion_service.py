@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import Any
 
@@ -13,6 +14,8 @@ from app.services.report_service import (
     canonical_hash,
 )
 from app.services.row_validator import validate_billing_log
+
+logger = logging.getLogger(__name__)
 
 
 class IngestionService:
@@ -31,7 +34,21 @@ class IngestionService:
     def replace_clinic_day(
         self, *, clinic_id: str, business_date: date, request: BillingLogRequest
     ) -> tuple[Any, str]:
+        logger.info(
+            "ingestion.replace start clinic_id=%s business_date=%s records=%s max_records=%s",
+            clinic_id,
+            business_date,
+            len(request.records),
+            self.max_records,
+        )
         if len(request.records) > self.max_records:
+            logger.warning(
+                "ingestion.replace too_many_records clinic_id=%s business_date=%s records=%s max_records=%s",
+                clinic_id,
+                business_date,
+                len(request.records),
+                self.max_records,
+            )
             raise AppError(
                 code="REQUEST_TOO_LARGE",
                 message=f"A maximum of {self.max_records} records is allowed per request.",
@@ -41,7 +58,22 @@ class IngestionService:
         ingestion = validate_billing_log(
             clinic_id=clinic_id, business_date=business_date, records=request.records
         )
+        logger.info(
+            "ingestion.validation complete clinic_id=%s business_date=%s received=%s accepted=%s rejected_issues=%s rejected_rows=%s",
+            clinic_id,
+            business_date,
+            ingestion.received_rows,
+            len(ingestion.accepted),
+            len(ingestion.rejected),
+            len({issue.row_index for issue in ingestion.rejected}),
+        )
         if request.records and not ingestion.accepted:
+            logger.warning(
+                "ingestion.replace no_valid_records clinic_id=%s business_date=%s rejected_issues=%s",
+                clinic_id,
+                business_date,
+                len(ingestion.rejected),
+            )
             raise AppError(
                 code="NO_VALID_RECORDS",
                 message="The billing log contains no valid rows; the existing clinic-day was not changed.",
@@ -73,6 +105,14 @@ class IngestionService:
 
         try:
             with self.session.begin():
+                logger.info(
+                    "ingestion.repository_replace start clinic_id=%s business_date=%s status=%s source_hash=%s report_hash=%s",
+                    clinic_id,
+                    business_date,
+                    status,
+                    source_hash,
+                    report_hash,
+                )
                 clinic_day, operation = self.repository.replace(
                     clinic_id=clinic_id,
                     clinic_name=request.clinic_name,
@@ -89,7 +129,15 @@ class IngestionService:
                     report_json=report.model_dump(mode="json"),
                 )
         except Exception:
+            logger.exception("ingestion.repository_replace failed clinic_id=%s business_date=%s", clinic_id, business_date)
             self.session.rollback()
             raise
 
+        logger.info(
+            "ingestion.replace done clinic_id=%s business_date=%s operation=%s status=%s",
+            clinic_id,
+            business_date,
+            operation,
+            status,
+        )
         return self.repository.get(clinic_id, business_date, with_children=True), operation

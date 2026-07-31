@@ -6,6 +6,7 @@ import { GlassPanel } from "../../../components/primitives/GlassPanel";
 import { InlineError } from "../../../components/feedback/InlineError";
 import { StatusPill } from "../../../components/primitives/StatusPill";
 import type { ClinicDaySummary } from "../../../api/types";
+import { logDiagnostic } from "../../../lib/diagnostics";
 import { useBillingFileState } from "../hooks/useBillingFile";
 import { useBillingImport } from "../hooks/useBillingImport";
 import { normalizeBusinessDateInput, trimOptional } from "../validation";
@@ -61,6 +62,16 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
       errors.confirmEmpty = "Confirm empty-day replacement before submitting.";
     }
     setFieldErrors(errors);
+    logDiagnostic(Object.keys(errors).length === 0 ? "info" : "warn", "import.form", "Submit validation result", {
+      clinicId: trimmedClinicId,
+      businessDateInput: businessDate,
+      normalizedBusinessDate,
+      hasFile: state.parsedFile !== null,
+      rowCount: state.parsedFile?.rowCount ?? 0,
+      existingReport,
+      isEmptyDay,
+      errors,
+    });
     if (errors.clinicId) {
       clinicIdRef.current?.focus();
       return false;
@@ -74,12 +85,23 @@ export function BillingImportForm({ recentReports, onPartialResult, onReviewIssu
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    logDiagnostic("info", "import.form", "Submit clicked", {
+      clinicId: trimmedClinicId,
+      businessDateInput: businessDate,
+      normalizedBusinessDate,
+      status: state.status,
+      hasFile: state.parsedFile !== null,
+      rowCount: state.parsedFile?.rowCount ?? 0,
+    });
     dispatch({ type: "form_changed" });
     if (!validate()) {
       return;
     }
     const dateForSubmit = normalizeBusinessDateInput(businessDate);
     if (dateForSubmit === null) {
+      logDiagnostic("error", "import.form", "Normalized date unexpectedly missing after validation", {
+        businessDateInput: businessDate,
+      });
       return;
     }
     void submitImport({
