@@ -1,137 +1,164 @@
-# SwasthiQ EOD Billing & Analytics Agent
+# SwasthiQ EOD Agent
 
-A full-stack clinic-day billing workflow for importing a raw JSON billing log and producing deterministic reconciliation, deterministic analytics, and a grounded owner-facing narrative with traced figures.
+<div align="center">
 
-## Product Overview
+<h3>Clinic-day billing reconciliation, analytics, and grounded AI summaries in one production-ready workflow.</h3>
 
-SwasthiQ EOD helps a clinic owner answer the end-of-day questions quickly:
+<p>
+  <a href="https://github.com/satvikkesarwani/swasthiq-eod-agent">
+    <img alt="Repository" src="https://img.shields.io/badge/GitHub-swasthiq--eod--agent-111827?style=for-the-badge&logo=github" />
+  </a>
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-Frontend-149ECA?style=for-the-badge&logo=react&logoColor=white" />
+  <img alt="Railway" src="https://img.shields.io/badge/Railway-One_Service-7B61FF?style=for-the-badge&logo=railway&logoColor=white" />
+  <img alt="NVIDIA" src="https://img.shields.io/badge/NVIDIA-Optional_AI-76B900?style=for-the-badge&logo=nvidia&logoColor=white" />
+</p>
 
-- how much was billed, collected, outstanding, and refunded;
-- which hour produced the most billed sales;
-- which medicines ranked highest by quantity and revenue;
-- what plain-language summary can be shared with an owner.
+<p>
+  <b>Import JSON billing logs</b> -
+  <b>validate every row</b> -
+  <b>generate deterministic reports</b> -
+  <b>explain only backend-approved facts</b>
+</p>
 
-The deterministic backend owns every number. The LLM layer may only explain approved report facts and every narrative figure is returned with a backend trace.
+</div>
 
-## Key Features
+---
 
-- Billing JSON import with safe frontend file checks and backend row validation.
-- Atomic clinic-day create/replace with SQLite persistence and Alembic migrations.
-- Reconciliation dashboard with payment-mode splits.
-- Analytics dashboard with hourly revenue chart, backend peak hour, and separate medicine rankings.
-- AI Narrative Summary page with explicit generate/regenerate actions.
-- Traced Figures panel mapping summary values back to deterministic report paths.
-- Deterministic fallback when NVIDIA is disabled, unavailable, or unsafe.
-- Empty-day, refund-only, and partial-import handling.
-- Production-safe request logging, security headers, CORS, and local rate limiting for narrative generation.
-- Railway backend and Vercel frontend deployment configuration.
+## Overview
 
-## Screens
+SwasthiQ EOD is a full-stack command centre for a clinic owner or operator closing a business day. It imports a raw billing log, validates every row, stores a canonical clinic-day report, and exposes three operational views:
 
-- `/reports` - import billing logs and open recent reports.
-- `/reports/:clinicId/:businessDate/reconciliation` - deterministic EOD reconciliation.
-- `/reports/:clinicId/:businessDate/analytics` - deterministic analytics.
-- `/reports/:clinicId/:businessDate/narrative` - grounded AI/fallback owner summary and traces.
+- **Reports**: upload a clinic-day JSON file, detect mismatched clinic/date metadata, review partial imports, and open stored reports.
+- **Reconciliation**: see billed, collected, outstanding, refunds, discounts, and payment-mode splits from backend-owned calculations.
+- **Analytics**: inspect hourly revenue, peak billing hour, medicine quantity rankings, and medicine revenue rankings.
+- **Narrative**: generate an owner-facing AI or deterministic fallback summary with traceable report facts.
+
+The important rule: **the deterministic backend owns every number**. The LLM layer can only explain approved facts and every narrative figure maps back to a backend trace.
+
+---
+
+## Live Routes
+
+| Surface | Route |
+| --- | --- |
+| App home | `/` |
+| Reports workspace | `/reports` |
+| Reconciliation | `/reports/:clinicId/:businessDate/reconciliation` |
+| Analytics | `/reports/:clinicId/:businessDate/analytics` |
+| Narrative summary | `/reports/:clinicId/:businessDate/narrative` |
+| Backend health | `/api/v1/health` |
+| OpenAPI | `/openapi.json` |
+
+The current Railway setup serves the React frontend and FastAPI backend from the same service. Frontend API calls use same-origin `/api/v1` by default.
+
+---
+
+## Feature Matrix
+
+| Area | What is implemented |
+| --- | --- |
+| Import safety | UTF-8 decoding, strict JSON parsing, duplicate-key rejection, file-size checks, clinic/date inference, mismatch blocking |
+| Backend validation | Strict Pydantic models, exact integer money fields, enum validation, row issue caps, raw-row privacy controls |
+| Reconciliation | Integer paise arithmetic, payment-mode buckets, collection-rate basis points, refund and outstanding handling |
+| Analytics | UTC hourly revenue, backend-selected peak hour, separate medicine rankings by quantity and revenue |
+| Persistence | SQLite, Alembic migrations, atomic create/replace, report hashes, stale narrative invalidation |
+| AI narrative | LangChain NVIDIA provider, cyclic API-key rotation, deterministic fallback, trace validation |
+| Observability | Request IDs, structured logs, safe error envelopes, privacy-safe diagnostics |
+| Deployment | Single Railway Docker image that builds React and serves it through FastAPI |
+
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Browser["React app"] --> API["FastAPI REST API"]
-    API --> DB["SQLite"]
-    API --> Report["Deterministic report services"]
+    Browser["React UI"] --> Static["FastAPI static frontend"]
+    Browser --> API["FastAPI /api/v1"]
+    API --> Parser["Strict JSON + row validation"]
+    Parser --> Report["Deterministic report engine"]
+    Report --> DB["SQLite + Alembic"]
+    Report --> Analytics["Reconciliation + analytics"]
     API --> Narrative["Grounded narrative service"]
-    Narrative --> NVIDIA["ChatNVIDIA optional"]
+    Narrative --> NVIDIA["NVIDIA API optional"]
     Narrative --> Fallback["Deterministic fallback"]
 ```
 
 More detail: `docs/architecture/FINAL_ARCHITECTURE.md`.
 
-## Tech Stack
+---
 
-- Backend: Python, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, SQLite.
-- Agentic layer: LangChain, `langchain-nvidia-ai-endpoints`, `ChatNVIDIA`.
-- Frontend: React, Vite, TypeScript, React Router, Recharts, CSS modules.
-- Deployment: Railway backend, Vercel frontend.
+## Data Contract
 
-## Repository Structure
+Input is a JSON array of visit rows:
 
-```text
-backend/       Python REST API, migrations, Dockerfile, startup script
-frontend/      React application
-docs/          architecture, API, operations and submission docs
-demo-data/     independent synthetic demo fixtures
+```json
+[
+  {
+    "clinic_id": "CLN-KNP-014",
+    "visit_id": "V-20260727-001",
+    "timestamp": "2026-07-27T09:10:00Z",
+    "doctor_id": "DOC-014-01",
+    "line_items": [
+      { "drug_name": "PARACETAMOL", "qty": 3, "unit_price_paise": 2000 }
+    ],
+    "payment_mode": "cash",
+    "amount_paid_paise": 6000,
+    "discount_paise": 0,
+    "is_refund": false
+  }
+]
 ```
 
-## Data Model
+The backend rejects rows that do not match the route clinic ID and business date. Partial imports are allowed when at least one row is valid; all-invalid imports do not replace stored reports.
 
-SQLite stores:
+---
 
-- `clinic_days`
-- `visits`
-- `line_items`
-- `ingestion_errors`
-- `narratives`
+## API
 
-Replacing a clinic-day is transactional. Valid replacements swap report children and invalidate stale narratives only when the deterministic report hash changes.
+Base path: `/api/v1`
 
-## API Overview
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Service and database health |
+| `GET` | `/clinic-days` | List stored reports with filters |
+| `PUT` | `/clinic-days/{clinic_id}/{business_date}` | Validate and create/replace a clinic-day report |
+| `GET` | `/clinic-days/{clinic_id}/{business_date}` | Read canonical report |
+| `GET` | `/clinic-days/{clinic_id}/{business_date}/errors` | Read stored validation issues |
+| `GET` | `/clinic-days/{clinic_id}/{business_date}/narrative` | Read current narrative |
+| `POST` | `/clinic-days/{clinic_id}/{business_date}/narrative` | Generate or regenerate narrative |
 
-Base path: `/api/v1`.
+Generated contract: `docs/contracts/openapi.json`
 
-- `GET /health`
-- `GET /clinic-days`
-- `PUT /clinic-days/{clinic_id}/{business_date}`
-- `GET /clinic-days/{clinic_id}/{business_date}`
-- `GET /clinic-days/{clinic_id}/{business_date}/errors`
-- `GET /clinic-days/{clinic_id}/{business_date}/narrative`
-- `POST /clinic-days/{clinic_id}/{business_date}/narrative`
+API guide: `docs/api/API_GUIDE.md`
 
-Generated OpenAPI: `docs/contracts/openapi.json`. Guide: `docs/api/API_GUIDE.md`.
+---
 
-## Financial Definitions
+## Tech Stack
 
-All money is integer paise in the backend.
+| Layer | Stack |
+| --- | --- |
+| Frontend | React 19, Vite, TypeScript, React Router, Recharts, CSS modules |
+| Backend | FastAPI, Pydantic v2, SQLAlchemy 2, Alembic |
+| Agentic layer | LangChain, `langchain-nvidia-ai-endpoints`, ChatNVIDIA |
+| Database | SQLite locally; Railway volume or Postgres-compatible `DATABASE_URL` for production |
+| Deployment | Docker multi-stage build on Railway |
 
-- Gross line total: `sum(qty * unit_price_paise)`.
-- Billed: gross total minus discount for non-refund rows.
-- Collected: `amount_paid_paise` for non-refund rows.
-- Outstanding: billed minus collected.
-- Refunds: absolute value of negative refund payments.
-- Payment-mode splits are computed by the backend.
+---
 
-The deterministic layer never calls an LLM.
+## Repository Map
 
-Strictness notes:
+```text
+backend/       FastAPI app, deterministic services, migrations, API schemas
+frontend/      React dashboard, import workflow, report views
+docs/          architecture, API, operations, implementation notes
+demo-data/     synthetic demo billing logs
+Dockerfile     single-service Railway build: React dist + FastAPI
+railway.toml   Railway Docker deployment config
+start.sh       production startup: migrations + uvicorn
+```
 
-- Integer money fields are validated as strict JSON integers and checked against the exact safe range before aggregation.
-- Collection rate is stored as integer basis points; the floating rate is retained only for existing UI compatibility.
-
-## Analytics Definitions
-
-- Revenue by hour uses accepted non-refund sales and UTC timestamps.
-- Peak hour is selected by the backend.
-- Top medicines by quantity and by revenue are separate rankings.
-- Refund rows do not create sales analytics.
-- Day type decisions use accepted activity counts, so refund-only and zero-value sales days are not mistaken for empty days.
-- Medicine-name typo checks are bounded by configured comparison and warning limits.
-
-## Grounded Narrative Design
-
-The narrative service builds an approved fact catalogue from the deterministic report. The model receives only safe context and approved placeholders. The backend validates:
-
-- structured output shape;
-- allowed fact usage by intent;
-- required facts by day type;
-- no invented literal numbers;
-- unsupported claims such as profit or trends;
-- trace coverage.
-
-If NVIDIA is unavailable or a response cannot be safely validated, deterministic fallback is returned.
-
-## Traced Figures
-
-The frontend displays backend trace entries only. It does not parse numbers from narrative text or construct report paths. Every displayed trace includes the backend display value and deterministic report path.
+---
 
 ## Local Setup
 
@@ -155,105 +182,59 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 Open `http://127.0.0.1:5173/reports`.
 
-## Configuration
+---
 
-Backend `.env` values:
+## Railway Deployment
 
-- `APP_ENV`
-- `APP_VERSION`
-- `DATABASE_URL`
-- `CORS_ALLOWED_ORIGINS`
-- `CORS_ALLOW_CREDENTIALS=false`
-- `LOG_LEVEL=INFO`
-- `LOG_FORMAT=json` for production
-- `MAX_RECORDS_PER_REQUEST`
-- `MAX_REQUEST_BODY_BYTES`
-- `MAX_JSON_DEPTH`
-- `MAX_JSON_NODES`
-- `MAX_LINE_ITEMS_PER_RECORD`
-- `MAX_ISSUES_PER_ROW`
-- `MAX_ISSUES_PER_REQUEST`
-- `MAX_PERSISTED_ISSUES_PER_REPORT`
-- `MAX_MEDICINE_WARNINGS_PER_REPORT`
-- `MAX_MEDICINE_COMPARISONS_PER_REPORT`
-- `MAX_SAFE_PAISE`
-- `STORE_REJECTED_RAW_ROWS=false`
-- `NARRATIVE_RATE_LIMIT_PER_MINUTE`
-- `LLM_ENABLED`
-- `LLM_PROVIDER=nvidia`
-- `NVIDIA_API_KEYS`
-- `NVIDIA_API_KEY`
-- `NVIDIA_MODEL`
-- `NVIDIA_BASE_URL`
-- `LLM_TIMEOUT_SECONDS`
-- `LLM_MAX_TOKENS`
-- `LLM_TEMPERATURE`
-- `LLM_TRANSPORT_RETRIES`
+This repo is configured for one Railway service:
 
-Frontend `.env` values:
+1. Railway reads the root `Dockerfile`.
+2. The Docker build installs frontend dependencies and runs `npm run build`.
+3. The built React app is copied into the backend image.
+4. FastAPI serves `/`, `/reports`, and `/reports/*` as the frontend.
+5. API routes remain under `/api/v1`.
 
-- `VITE_API_BASE_URL`
-- `VITE_DEV_PROXY_TARGET`
-- `VITE_APP_VERSION`
+Required Railway settings:
 
-Never put `NVIDIA_API_KEYS`, `NVIDIA_API_KEY`, or `DATABASE_URL` in frontend configuration.
+```env
+APP_ENV=production
+LOG_FORMAT=json
+CORS_ALLOWED_ORIGINS=https://swasthiq-eod-agent-production.up.railway.app
+```
 
-## NVIDIA Configuration
+Recommended for real persistence:
 
-`NVIDIA_API_KEYS` is optional for local/demo operation. If it is missing, the API returns a grounded deterministic fallback summary. To use live model generation with rotation, configure the backend only:
+```env
+DATABASE_URL=<persistent-database-url>
+```
+
+Optional for live AI summaries:
 
 ```env
 LLM_ENABLED=true
 LLM_PROVIDER=nvidia
-NVIDIA_API_KEYS=<key-1>,<key-2>,<key-3>
+NVIDIA_API_KEYS=<comma-separated-backend-only-keys>
 NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
 ```
 
-The backend selects one NVIDIA key per provider call, then advances to the next key. `NVIDIA_API_KEY` is still supported for a single-key deployment and is used only when `NVIDIA_API_KEYS` is empty.
+Keep Railway public networking on port `8080`.
+
+---
 
 ## Demo Data
 
-Use synthetic files in `demo-data/`:
+Use the synthetic fixtures in `demo-data/`:
 
-- `normal-day.json`
-- `partial-import-day.json`
-- `refund-only-day.json`
-- `empty-day.json`
+| File | Scenario |
+| --- | --- |
+| `normal-day.json` | Clean business day |
+| `partial-import-day.json` | Valid report with rejected rows |
+| `refund-only-day.json` | Refund-only clinic day |
+| `empty-day.json` | No-activity day |
 
-These are independent demo fixtures and not the original evaluation data.
+---
 
-## Deployment
-
-Backend on Railway:
-
-1. Create Railway service from this repo.
-2. Use `railway.toml` and `backend/Dockerfile`.
-3. Add a persistent volume for SQLite.
-4. Set `DATABASE_URL=sqlite:////path/on/volume/swasthiq_eod.db`.
-5. Set `APP_ENV=production`, `LOG_FORMAT=json`, `CORS_ALLOWED_ORIGINS=<vercel-url>`.
-6. Optionally set `NVIDIA_API_KEYS` or `NVIDIA_API_KEY`.
-
-Frontend on Vercel:
-
-1. Use `vercel.json`.
-2. Set `VITE_API_BASE_URL=<railway-backend-origin>`.
-3. Build command and output directory are already configured.
-4. SPA rewrites support deep links.
-
-Live deployment was not executed from this workspace.
-
-## Logging, Privacy, And Security
-
-- Request IDs are returned through `X-Request-ID`.
-- Production logs can be JSON.
-- Billing rows, request bodies, narrative text, prompts, raw model output, and secrets must never be logged.
-- CORS is explicit and credentials are disabled.
-- Security headers are applied by backend and Vercel config.
-- Narrative generation has a process-local rate limit.
-
-Guide: `docs/operations/LOGGING_AND_OBSERVABILITY.md`.
-
-## Quality Commands
+## Quality Checks
 
 Backend:
 
@@ -274,21 +255,37 @@ npm run lint
 npm run build
 ```
 
-## Known Limitations
+---
 
-- No authentication or real clinic multi-user controls.
-- SQLite persistence on Railway requires a persistent volume.
+## Security And Privacy
+
+- API keys stay backend-only.
+- Billing rows, request bodies, prompts, model output, and secrets are not logged.
+- Request IDs are returned through `X-Request-ID`.
+- Production logs support JSON format.
+- CORS is explicit; credentials are disabled by default.
+- Security headers are applied by the backend.
+- Narrative generation has a process-local rate limit.
+
+Operations guide: `docs/operations/LOGGING_AND_OBSERVABILITY.md`.
+
+---
+
+## Known Limits
+
+- No authentication or real clinic multi-user authorization.
+- SQLite on Railway needs a persistent volume; otherwise data can reset across deploys.
 - Narrative rate limiting is process-local.
-- Live NVIDIA generation depends on valid backend-only NVIDIA key configuration.
-- No profit or margin is computed because cost price is not part of the input schema.
+- Live NVIDIA generation depends on valid backend-only NVIDIA credentials.
+- Profit and margin are not computed because cost price is not part of the input schema.
 
-## Submission Links
+---
 
-- Public repository: `TODO`
-- Frontend live URL: `TODO`
-- Backend health URL: `TODO`
-- Demo video: `TODO`
+## Project Links
 
-## Demo Video Guide
-
-Use `docs/submission/DEMO_VIDEO_SCRIPT.md`.
+| Item | Link |
+| --- | --- |
+| Repository | `https://github.com/satvikkesarwani/swasthiq-eod-agent` |
+| Railway app | `https://swasthiq-eod-agent-production.up.railway.app` |
+| Health | `https://swasthiq-eod-agent-production.up.railway.app/api/v1/health` |
+| Demo script | `docs/submission/DEMO_VIDEO_SCRIPT.md` |
