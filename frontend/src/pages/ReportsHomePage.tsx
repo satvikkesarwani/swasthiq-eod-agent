@@ -39,9 +39,14 @@ export function ReportsHomePage() {
             rejectedRows={partialResult?.rejectedRows ?? 0}
           />
           <div className={styles.contractList}>
-            <div><ShieldCheck size={18} aria-hidden="true" /> Rows are validated securely by the billing service after submission.</div>
-            <div><StatusPill tone="healthy">Native fetch</StatusPill></div>
-            <div><StatusPill tone="fallback">Narrative later</StatusPill></div>
+            <div className={styles.contractNote}>
+              <ShieldCheck size={18} aria-hidden="true" />
+              <span>Rows are validated securely by the billing service after submission.</span>
+            </div>
+            <div className={styles.contractPills}>
+              <StatusPill tone="healthy">Native fetch</StatusPill>
+              <StatusPill tone="fallback">Narrative later</StatusPill>
+            </div>
           </div>
         </GlassPanel>
       </div>
